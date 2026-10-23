@@ -1,0 +1,4229 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>🐰 Rabbit v18</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;height:100dvh;background:#0d0d15;color:#e8e8e8;font-family:system-ui,sans-serif;overflow:hidden;user-select:none}
+  body{display:flex;flex-direction:column}
+
+  /* ==== ШАПКА ==== */
+  #top{height:48px;background:#16162a;border-bottom:1px solid #2a2a4a;
+    display:flex;align-items:center;padding:0 10px;gap:6px;flex-shrink:0;overflow-x:auto}
+  #top::-webkit-scrollbar{height:0}
+  #logo{font-size:15px;font-weight:700;color:#00d4ff;white-space:nowrap;margin-right:4px}
+  .btn{background:#00d4ff;color:#000;border:none;padding:8px 12px;
+    border-radius:7px;font-weight:700;font-size:12px;cursor:pointer;
+    transition:filter .15s,transform .1s;white-space:nowrap;flex-shrink:0}
+  .btn:active{transform:scale(.95)}
+  .btn:hover{filter:brightness(1.15)}
+  .btn.ghost{background:transparent;color:#c9d1d9;border:1px solid #2a2a4a}
+  .btn.ghost:hover{background:#2a2a4a}
+  #status{flex:1;text-align:right;font-size:11px;color:#888;
+    font-family:monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:8px;min-width:60px}
+
+  /* ==== РЕДАКТОР ==== */
+  #editorWrap{flex:1;position:relative;background:#0a0a14;overflow:hidden;min-height:0}
+  #lineNums{position:absolute;left:0;top:0;bottom:0;width:42px;
+    background:#08080f;color:#444;font-family:monospace;font-size:13px;
+    line-height:1.6;padding:14px 8px 14px 0;text-align:right;
+    user-select:none;overflow:hidden;z-index:3;border-right:1px solid #1a1a2a;white-space:pre}
+  #editor{position:absolute;left:42px;top:0;right:0;bottom:0;
+    background:transparent;color:#e8e8e8;caret-color:#00d4ff;
+    font-family:monospace;font-size:13px;line-height:1.6;
+    padding:14px 14px 14px 12px;border:none;outline:none;resize:none;
+    white-space:pre;overflow:auto;z-index:2;tab-size:2;user-select:text}
+  #editor::selection{background:#00d4ff44}
+
+  /* ==== ОШИБКИ ==== */
+  #errors{position:absolute;bottom:0;left:0;right:0;background:#1a0a0aee;
+    border-top:1px solid #441111;padding:8px 12px;font-family:monospace;
+    font-size:11px;color:#ff8888;max-height:130px;overflow-y:auto;
+    display:none;z-index:30}
+  #errors.show{display:block}
+  #errors .err-item{padding:3px 0;cursor:pointer}
+  #errors .err-item:hover{background:#ff333322}
+
+  /* ==== CANVAS ==== */
+  #stage{position:absolute;inset:0;background:#000;display:none;z-index:20;
+    align-items:center;justify-content:center;overflow:hidden}
+  #stage.show{display:flex}
+  #canvas{max-width:100%;max-height:100%;display:block;touch-action:none}
+  #exitBtn{position:absolute;top:10px;right:10px;background:#ff3355cc;color:#fff;
+    border:none;padding:8px 16px;border-radius:8px;font-weight:600;
+    font-size:12px;cursor:pointer;backdrop-filter:blur(10px);z-index:21}
+
+  /* ==== ПАМЯТКА ==== */
+  #hint{background:#16162a;border-top:1px solid #2a2a4a;
+    padding:6px 10px;font-size:10px;color:#888;flex-shrink:0;
+    display:flex;gap:10px;overflow-x:auto;white-space:nowrap;
+    font-family:monospace}
+  #hint::-webkit-scrollbar{height:0}
+  #hint b{color:#00d4ff}
+
+  /* ==== СВЯЗЬ ==== */
+  #linkModal{position:fixed;inset:0;background:#000a;z-index:100;display:none;align-items:center;justify-content:center;padding:10px}
+  #linkModal.show{display:flex}
+  .lm-box{background:#16162a;border:1px solid #2a2a4a;border-radius:12px;padding:14px;width:100%;max-width:460px;max-height:92%;overflow-y:auto;user-select:text;font-size:13px}
+  .lm-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;color:#00d4ff;font-size:15px}
+  .lm-box .btn{margin:3px 3px 3px 0;padding:9px 12px;font-size:12px}
+  .lm-box textarea{width:100%;height:70px;background:#0a0a14;color:#e8e8e8;border:1px solid #2a2a4a;border-radius:6px;font-family:monospace;font-size:11px;padding:6px;margin:4px 0;user-select:text;resize:none}
+  .lm-box small{color:#888;display:block;margin:4px 0}
+  #lmState{padding:6px 8px;border-radius:6px;background:#0a0a14;margin-bottom:8px;font-family:monospace;font-size:12px}
+  #lmState.ok{color:#5dff9a}
+  .lm-box hr{border:none;border-top:1px solid #2a2a4a;margin:10px 0}
+  #bcModal{position:fixed;inset:0;background:#000a;z-index:100;display:none;align-items:center;justify-content:center;padding:10px}
+  #bcModal.show{display:flex}
+  #bcOut{background:#0a0a14;color:#9fe8c8;border:1px solid #2a2a4a;border-radius:6px;padding:8px;font:11px/1.5 monospace;overflow:auto;max-height:60vh;white-space:pre;user-select:text;margin-top:6px}
+  #bcInfo{white-space:pre-wrap}
+  #sprModal{position:fixed;inset:0;background:#000a;z-index:100;display:none;align-items:center;justify-content:center;padding:10px}
+  #sprModal.show{display:flex}
+  #sprModal input[type=text],#sprModal input[type=number]{background:#0a0a14;color:#e8e8e8;border:1px solid #2a2a4a;border-radius:6px;padding:7px;font-size:12px;width:100%;margin:3px 0;user-select:text}
+  #sprModal label{font-size:12px;color:#c9d1d9;display:block;margin:4px 0}
+  .sp-row{display:flex;gap:6px;align-items:center}
+  .sp-row input[type=number]{width:70px;flex-shrink:0}
+  #sprMsg{font-size:12px;color:#ffcc66;min-height:16px;margin:4px 0}
+  #sprInfo{font-size:11px;color:#888;margin:4px 0}
+  .sp{display:flex;align-items:center;gap:8px;padding:5px;border:1px solid #2a2a4a;border-radius:8px;margin:4px 0}
+  .sp img{width:44px;height:44px;object-fit:contain;background:#0a0a14;border-radius:6px;flex-shrink:0}
+  .sp span{flex:1;min-width:0;font-size:12px;overflow:hidden;text-overflow:ellipsis}
+  .sp small{display:block;color:#888;font-size:10px;margin:0}
+  @media (max-width: 500px) {
+    #logo{font-size:13px}
+    .btn{padding:7px 9px;font-size:11px}
+    #editor{font-size:12px}
+    #lineNums{font-size:12px}
+  }
+</style>
+</head>
+<body>
+
+<div id="top">
+  <span id="logo">🐰 Rabbit 18</span>
+  <button class="btn" id="runBtn">▶</button>
+  <button class="btn ghost" id="pauseBtn">⏸</button>
+  <button class="btn ghost" id="saveBtn">💾</button>
+  <button class="btn ghost" id="exampleBtn">📋</button>
+  <button class="btn ghost" id="carrotBtn">🥕</button>
+  <button class="btn ghost" id="scanBtn">🔍</button>
+  <button class="btn ghost" id="scanBtn2">🕵️</button>
+  <button class="btn ghost" id="bcBtn" title="Байткод">🔬</button>
+  <button class="btn ghost" id="fontBtn">🔠</button>
+  <button class="btn ghost" id="linkBtn">📡</button>
+  <button class="btn ghost" id="netDemoBtn">🎮</button>
+  <button class="btn ghost" id="sprBtn">🖼</button>
+  <button class="btn ghost" id="gdBtn">🕹</button>
+  <button class="btn ghost" id="physBtn" title="Пример физики">🎱</button>
+  <button class="btn ghost" id="clearBtn">🗑</button>
+  <div id="status">Готово</div>
+</div>
+
+<div id="editorWrap">
+  <div id="lineNums"></div>
+  <textarea id="editor" wrap="off" spellcheck="false" autocorrect="off" autocapitalize="off"></textarea>
+  <div id="errors"></div>
+  <div id="stage">
+    <canvas id="canvas" width="800" height="600"></canvas>
+    <button id="exitBtn">✕ Выйти</button>
+  </div>
+</div>
+
+<div id="linkModal"><div class="lm-box">
+  <div class="lm-h"><b>📡 Связь устройств</b><button class="btn ghost" id="lmClose">✕</button></div>
+  <div id="lmState">Не подключено</div>
+  <div id="lmSetup">
+    <small>Оба устройства в одной Wi-Fi сети, на обоих открыт этот файл. Один раз обменяйтесь двумя кодами — дальше всё летит мгновенно.</small>
+    <button class="btn" id="lmHost">1️⃣ Я первый: создать код</button>
+    <button class="btn ghost" id="lmJoin">2️⃣ Я второй: вставить код</button>
+    <div id="lmStep"></div>
+  </div>
+  <div id="lmConn" style="display:none">
+    <button class="btn" id="lmSend">➡️ Отправить мой код</button>
+    <button class="btn ghost" id="lmRun">▶ Запустить там</button>
+    <button class="btn ghost" id="lmLive">🔁 Живой режим: выкл</button>
+    <button class="btn ghost" id="lmOff">❌ Отключить</button>
+    <small>Живой режим: всё, что ты печатаешь, сразу появляется на другом устройстве (и наоборот).</small>
+  </div>
+  <hr>
+  <small>Без соединения (через Telegram, AirDrop и т.п.):</small>
+  <button class="btn ghost" id="lmShare">📤 Поделиться кодом</button>
+  <button class="btn ghost" id="lmCopy">📋 Копировать код</button>
+  <button class="btn ghost" id="lmPaste">📥 Вставить из буфера</button>
+</div></div>
+
+<div id="hint">
+  <span><b>/size</b> W H</span>
+  <span><b>/bgcolor</b> #xxx</span>
+  <span><b>/color</b> #xxx</span>
+  <span><b>/circle</b> x y r</span>
+  <span><b>/rect</b> x y w h</span>
+  <span><b>/line</b> x1 y1 x2 y2</span>
+  <span><b>/text</b> "..." x y</span>
+  <span><b>/var</b> имя значение</span>
+  <span><b>/add</b> имя число</span>
+  <span><b>$</b>имя — значение</span>
+  <span><b>/group</b> ... <b>//s</b></span>
+  <span><b>/art</b> имя ... <b>/end</b></span>
+  <span><b>/use</b> имя x y</span>
+  <span><b>/memory</b> имя ... <b>/end</b></span>
+  <span><b>/do</b> имя</span>
+  <span><b>//but</b> усл ... <b>//else</b> ... <b>/end</b></span>
+  <span><b>//tap</b> x1 y1 x2 y2 (или имя) ... <b>/end</b></span>
+  <span><b>/sp</b> сек</span>
+  <span><b>/rotatemove</b> имя угол [x y]</span>
+  <span><b>/id</b> name</span>
+  <span><b>/move</b> [имя] dx dy</span>
+  <span><b>/moveTo</b> name x y</span>
+  <span><b>/colorTo</b> name #xxx</span>
+  <span><b>/delete</b> name</span>
+  <span><b>/clear</b></span>
+  <span><b>/delay</b> sec</span>
+  <span><b>/repeat</b> N ... <b>/end</b></span>
+  <span><b>/timer</b> имя сек [раз] ... <b>/end</b></span>
+  <span><b>/no</b> [имя таймера]</span>
+  <span><b>/timer delete</b> имя сек</span>
+  <span><b>//key</b> w a up ... <b>/end</b></span>
+  <span><b>//but</b> a touch b</span>
+  <span><b>/random</b> имя мин макс</span>
+  <span><b>sin</b>(градусы) <b>cos</b>(градусы)</span>
+  <span><b>/sound</b> beep click pop boom win lose</span>
+  <span><b>/alpha</b> имя 0.5</span>
+  <span><b>/layer</b> [имя] N · <b>/front</b> [имя] · <b>/back</b> [имя]</span>
+  <span><b>/shadow</b> имя #цвет [размытие]</span>
+  <span><b>/gradient</b> имя #1 #2</span>
+  <span><b>/lineWidth</b> [имя] N</span>
+  <span><b>/round</b> имя r</span>
+  <span><b>/border</b> имя</span>
+  <span><b>/hp</b> имя N · <b>/damage</b> имя N</span>
+  <span><b>/clone</b> имя [новое]</span>
+  <span><b>/follow</b> кто за_кем [скор]</span>
+  <span><b>/gravity</b> g · <b>/vx</b> <b>/vy</b> имя N · <b>/bounce</b> имя [k] · <b>/freeze</b> имя</span>
+  <span><b>/ease</b> in out inout bounce off</span>
+  <span><b>/soundOnTouch</b> a b [звук]</span>
+  <span><b>/list</b> имя ... · <b>/push</b> · <b>/get</b> · <b>/len</b> · <b>/pick</b> · <b>$</b>имя[1]</span>
+  <span><b>/randomColor</b> [имя]</span>
+  <span><b>/style</b> откуда куда</span>
+  <span><b>/wait</b> сек</span>
+  <span><b>/save</b> [слот] · <b>/load</b> [слот]</span>
+  <span><b>//but</b> mouse down · saved · имя.hp</span>
+  <span><b>$mouseX</b> <b>$mouseY</b></span>
+  <span><b>v18 физика:</b> /collide имя [off] · /mass имя m · /friction имя μ · /impulse имя ix iy · /bounce имя k · /solid имя · 🎱 пример</span>
+  <span><b>v17:</b> 🔬 байткод — как твой код компилируется для виртуальной машины</span>
+  <span><b>v16 игры:</b> /nogravity имя · /hurt имя · /hitbox имя 0.6 · /spin имя град/сек · 🕹 пример Geometry Dash</span>
+  <span><b>v15 фигуры:</b> /poly x y r сторон [глубина] · /star x y r лучей [глубина] · /stroke имя толщина [#цвет] · /glow имя сила [#цвет]</span>
+  <span><b>v14 спрайты:</b> 🖼 загрузить · /sprite имя x y [w h] · /skin объект спрайт · /flip [имя] · /frame [имя] N · /spriteanim [имя] fps</span>
+  <span><b>v13 сеть:</b> /netown имя · /netvar имя · /netsend имя [знач] · <b>//net</b> имя ... <b>/end</b> · $player $online · 🎮 пример</span>
+  <span><b>v10 эффекты:</b> /trail /shake /flash /blur /pixelate /vignette /3d /rotatecam /zoom /particle x y [n] /textwave /bgmove /parallax /drawonpath</span>
+  <span><b>v10 игра:</b> /player /platformer /solid /jump /coin x y /enemy /patrol /boss /checkpoint /powerup /teleport /knockback /combo /lives /timerbar /dialogue /inventory /level /savepoint</span>
+  <span><b>v10 ИИ:</b> /shootat /flee /aggro /nearest /spawn /waves</span>
+  <span><b>v10 звук:</b> /music /volume /pitch · /sound step hit coin jump gameover</span>
+  <span><b>v10 мир:</b> /camera /weather /daynight /portal /key /door</span>
+  <span><b>v10 UI:</b> /button /pause /hud /score /healthbar /share /download /leaderboard</span>
+  <span><b>v10 безумие:</b> /gravityflip /timeslow /rewind /chaos /glitch /invert /mirror /kaleidoscope /gravitywell /blackhole</span>
+  <span><b>v10 награды:</b> /achievement /stars /rank /bonus</span>
+  <span><b>#</b> комментарий</span>
+</div>
+
+<div id="bcModal"><div class="lm-box" style="max-width:680px">
+  <div class="lm-h"><b>🔬 Байткод</b><button class="btn ghost" id="bcClose">✕</button></div>
+  <small id="bcInfo"></small>
+  <button class="btn ghost" id="bcCopy">📋 Копировать</button>
+  <pre id="bcOut"></pre>
+</div></div>
+
+<div id="sprModal"><div class="lm-box">
+  <div class="lm-h"><b>🖼 Спрайты</b><button class="btn ghost" id="sprClose">✕</button></div>
+  <small>Картинки лежат в памяти браузера — не в файле Rabbit и не в коде. Сжимаются до 256 px. В коде: <b>/sprite</b> имя x y [w h]</small>
+  <input type="file" id="sprFile" accept="image/*" multiple style="font-size:12px;margin:6px 0;width:100%">
+  <div class="sp-row"><input type="text" id="sprName" placeholder="имя (по умолчанию — имя файла)"><input type="number" id="sprFrames" min="1" max="64" value="1" title="кадров в ряд (для анимации)"></div>
+  <label><input type="checkbox" id="sprPixel"> пиксель-арт (без сглаживания)</label>
+  <small>Число справа — сколько кадров в ряд, если это лист анимации.</small>
+  <button class="btn" id="sprAdd">➕ Добавить</button>
+  <div id="sprMsg"></div><div id="sprInfo"></div><div id="sprList"></div>
+</div></div>
+
+<script>
+/* ==========================================
+   🐰 Rabbit Editor v11
+   Один интерпретатор для всего:
+   /repeat, //but, /memory (/do), /art (/use), //tap
+   Анимации: /sp сек + /moveTo /move /colorTo /rotatemove
+   Переменные: /var, /add и $имя в любом аргументе
+   Таймеры: /timer имя сек [раз] ... /end, отмена: /no [имя]
+   Игры: //but a touch b, //key w ... /end, /random, /sound, /timer delete имя сек
+   ========================================== */
+
+const editor = document.getElementById('editor');
+const lineNums = document.getElementById('lineNums');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d', { alpha: false });
+const stage = document.getElementById('stage');
+const statusEl = document.getElementById('status');
+const errorsEl = document.getElementById('errors');
+
+const TAU = Math.PI * 2;
+const DEG = Math.PI / 180;
+const MAX_COMMANDS = 200000;   // строк кода в программе после разбора
+const MAX_STEPS = 5000000;    // действий за один запуск (защита от зависания)
+const MAX_OBJECTS = 200000;    // объектов на экране
+const SLICE_MS = 25;          // сколько работаем, прежде чем дать экрану отдохнуть
+const MAX_DEPTH = 100;         // вложенность /do и /use
+const MAX_TAP_QUEUE = 60;     // сколько нажатий помним, пока программа занята
+const FRAME_MS = 16;          // кадр анимации
+const YIELD = { yield: true };
+const MAX_TIMERS = 5000;      // одновременно живых таймеров
+const TICK_MS = 30;           // как часто проверяем таймеры
+
+let objects = [];
+let nextId = 1;
+let deadCount = 0;            // сколько удалённых объектов лежит в objects
+let currentColor = '#ffffff';
+let bgColor = '#000000';
+let canvasW = 800, canvasH = 600;
+let speed = 0;                // /sp: сколько секунд длится действие (0 — сразу)
+let vars = Object.create(null);   // переменные: /var имя значение
+let stopped = true;
+let paused = false;
+let timer = null;
+let groupStack = [];          // открытые /group: { start, line }
+let groupBase = 0;            // //s не трогает группы, открытые снаружи /art
+let scopeStart = 0;           // внутри /art видны только свои объекты
+let artDepth = 0;
+let steps = 0;
+function newDefs() { return { art: Object.create(null), mem: Object.create(null) }; }
+let defs = newDefs();
+let taps = [];                // зоны //tap
+let runCtl = null;            // управление текущим запуском (нажатия)
+let currentErrors = [];
+let errKeys = new Set();
+let queue = [];               // нажатия и сработавшие таймеры, ждущие очереди
+let timers = [];              // живые таймеры (/timer)
+let everTimers = new Set();   // имена таймеров, которые хоть раз запускались
+let everNames = new Set();    // имена, которые хоть раз давали через /id
+let allTimerNodes = [];       // все блоки /timer из кода (для проверки заранее)
+let vclock = 0;               // «время программы», мс (на паузе стоит)
+let lastWall = 0;
+let tickHandle = null;
+let gravity = 0;              // /gravity
+let curLW = 2;                // /lineWidth: толщина новых линий
+let easeMode = 'linear';      // /ease
+let lists = Object.create(null);   // /list
+let touchSounds = [];         // /soundOnTouch
+let mouseIsDown = false;      // //but mouse down
+let physHandle = null, physLast = 0;
+const PHYS_MS = 16;
+
+function addErr(line, msg) {
+  const key = line + '|' + msg;
+  if (errKeys.has(key)) return;      // одну и ту же ошибку показываем один раз
+  errKeys.add(key);
+  currentErrors.push({ line, msg });
+}
+
+// ===== ПЕРЕМЕННЫЕ И ВЫРАЖЕНИЯ =====
+const VAR_NAME = /^[\p{L}_][\p{L}\p{N}_]*$/u;
+const SUBST_RE = /\$\$|\$\{([^}]+)\}|\$([\p{L}_][\p{L}\p{N}_]*)\[([^\]]+)\]|\$([\p{L}_][\p{L}\p{N}_]*)/gu;
+const LIST_RE = /\$([\p{L}_][\p{L}\p{N}_]*)\[([^\]]+)\]/gu;
+// элемент списка: $имя[1] — первый элемент
+function listItem(name, idxSrc) {
+  const L = lists[name];
+  if (!L) throw new Error('Список "' + name + '" не создан — сначала /list ' + name + ' ...');
+  let i;
+  try { i = Math.floor(calc(subst(idxSrc))); }
+  catch (e) { if (e instanceof NotMath) throw new Error('Номер элемента в [ ] — число'); throw e; }
+  if (!(i >= 1 && i <= L.length)) throw new Error('В списке "' + name + '" нет элемента ' + i + ' (есть 1…' + L.length + ')');
+  return L[i - 1];
+}
+
+function getVar(name) {
+  const v = vars[name];
+  if (v === undefined) {
+    throw new Error('Переменная "$' + name + '" не создана — сначала /var ' + name + ' значение');
+  }
+  return v;
+}
+function fmtVal(v) {
+  return typeof v === 'number' ? String(Number(v.toPrecision(12))) : String(v);
+}
+// заменяет $имя (и ${имя}) на значения; $$ — просто знак доллара
+function subst(s) {
+  if (s.indexOf('$') < 0) return s;
+  return s.replace(SUBST_RE, (m, a, ln, li, b) => {
+    if (m === '$$') return '$';
+    if (ln !== undefined) return fmtVal(listItem(ln, li));
+    return fmtVal(getVar(a !== undefined ? a : b));
+  });
+}
+
+class NotMath extends Error {}
+
+// токены: 1 объект.свойство, 2 свойство, 3 число, 4 ${имя}, 5 $имя, 6 знак, 7 функция (sin/cos)
+const TOK_RE = /\s*(?:([^\s.$+\-*/%()]+)\.(x|y|w|h|hp|vx|vy|color)(?![\p{L}\p{N}_])|(\d+\.?\d*|\.\d+)|\$\{([^}]+)\}|\$([\p{L}_][\p{L}\p{N}_]*)|([-+*/%()])|(sin|cos)(?=\s*\())/uy;
+
+// считает выражение: числа, $переменные, объект.x, sin(°) cos(°), + - * / % и скобки.
+// NotMath — это не выражение (например, слово или цвет); любая другая
+// ошибка — настоящая (нет переменной, деление на 0 ...)
+function calc(src) {
+  const s = String(src).trim().replace(LIST_RE, (m, n, i) => {
+    const v = listItem(n, i);
+    if (typeof v !== 'number') throw new NotMath();
+    return '(' + fmtVal(v) + ')';
+  }).replace(/,/g, '.');
+  if (s === '') throw new NotMath();
+  const toks = [];
+  let pos = 0;
+  while (pos < s.length) {
+    TOK_RE.lastIndex = pos;
+    const m = TOK_RE.exec(s);
+    if (!m) throw new NotMath();
+    pos = TOK_RE.lastIndex;
+    toks.push(m);
+  }
+  let i = 0;
+
+  function operand(m) {
+    if (m[1] !== undefined) {
+      const o = byName(m[1]);
+      if (!o) throw new Error('"' + m[1] + '" не найден');
+      if (m[2] === 'color') throw new NotMath();
+      return propOf(o, m[2]);
+    }
+    if (m[3] !== undefined) return parseFloat(m[3]);
+    const v = getVar(m[4] !== undefined ? m[4] : m[5]);
+    if (typeof v !== 'number') throw new NotMath();
+    return v;
+  }
+  function factor() {
+    const m = toks[i++];
+    if (!m) throw new NotMath();
+    if (m[7] !== undefined) {                    // sin(...) / cos(...) — угол в градусах
+      const open = toks[i++];
+      if (!open || open[6] !== '(') throw new NotMath();
+      const a = expr();
+      const close = toks[i++];
+      if (!close || close[6] !== ')') throw new NotMath();
+      const r = m[7] === 'sin' ? Math.sin(a * DEG) : Math.cos(a * DEG);
+      return Math.round(r * 1e12) / 1e12;        // sin(180) = 0, а не 1.2e-16
+    }
+    const op = m[6];
+    if (op === '-') return -factor();
+    if (op === '+') return factor();
+    if (op === '(') {
+      const v = expr();
+      const c = toks[i++];
+      if (!c || c[6] !== ')') throw new NotMath();
+      return v;
+    }
+    if (op !== undefined) throw new NotMath();
+    return operand(m);
+  }
+  function term() {
+    let v = factor();
+    for (;;) {
+      const m = toks[i];
+      const op = m && m[6];
+      if (op !== '*' && op !== '/' && op !== '%') return v;
+      i++;
+      const r = factor();
+      if (op === '*') v *= r;
+      else {
+        if (r === 0) throw new Error('Деление на 0');
+        v = op === '/' ? v / r : v % r;
+      }
+    }
+  }
+  function expr() {
+    let v = term();
+    for (;;) {
+      const m = toks[i];
+      const op = m && m[6];
+      if (op !== '+' && op !== '-') return v;
+      i++;
+      const r = term();
+      v = op === '+' ? v + r : v - r;
+    }
+  }
+
+  let v;
+  try {
+    v = expr();
+  } catch (e) {
+    if (e instanceof RangeError) throw new Error('Выражение слишком сложное');
+    throw e;
+  }
+  if (i < toks.length) throw new NotMath();
+  if (!isFinite(v)) throw new Error('Результат не число');
+  return v;
+}
+
+// ===== ЧИСЛА =====
+// понимает точку и запятую (0.5 и 0,5), а ещё выражения без пробелов: 100+$x*2
+function num(s) {
+  s = String(s).trim().replace(',', '.');
+  if (s === '') return NaN;
+  const n = Number(s);
+  if (!Number.isNaN(n)) return n;
+  try { return calc(s); } catch (e) { return NaN; }
+}
+// число из аргумента: сначала всё выражение целиком, потом первое слово
+function numArg(s) {
+  const n = num(s);
+  if (isFinite(n)) return n;
+  return num(String(s).trim().split(/\s+/)[0]);
+}
+function nums(rest, n, usage) {
+  const t = rest.trim() === '' ? [] : rest.trim().split(/\s+/);
+  const p = t.slice(0, n).map(num);
+  if (p.length < n || p.some(v => !isFinite(v))) throw new Error(usage);
+  return p;
+}
+// «имя число число ...» ровно k чисел
+function nameAndNums(rest, k, usage) {
+  const t = rest.trim() === '' ? [] : rest.trim().split(/\s+/);
+  if (t.length !== k + 1) throw new Error(usage);
+  const v = t.slice(1).map(num);
+  if (v.some(x => !isFinite(x))) throw new Error(usage);
+  return [t[0], ...v];
+}
+
+// ===== НОМЕРА СТРОК =====
+let lineCount = 0;
+function updateLineNums() {
+  const v = editor.value;
+  let n = 1;
+  for (let i = v.indexOf('\n'); i !== -1; i = v.indexOf('\n', i + 1)) n++;
+  if (n !== lineCount) {
+    lineCount = n;
+    let s = '';
+    for (let i = 1; i <= n; i++) s += i + '\n';
+    lineNums.textContent = s;
+  }
+  lineNums.scrollTop = editor.scrollTop;
+}
+editor.addEventListener('input', updateLineNums);
+editor.addEventListener('scroll', () => { lineNums.scrollTop = editor.scrollTop; });
+
+// ===== ОШИБКИ =====
+let shownErrCount = -1;
+function showErrors(errors) {
+  shownErrCount = errors.length;
+  errorsEl.innerHTML = '';
+  if (!errors.length) { errorsEl.classList.remove('show'); return; }
+  const sorted = errors.slice().sort((a, b) => a.line - b.line);
+  for (const e of sorted) {
+    const d = document.createElement('div');
+    d.className = 'err-item';
+    d.textContent = (e.warn ? '⚠️ Строка ' + e.line + ' (возможно): ' : '❌ Строка ' + e.line + ': ') + e.msg;
+    d.onclick = () => {
+      if (stage.classList.contains('show')) exitStage();
+      const lines = editor.value.split('\n');
+      let pos = 0;
+      for (let i = 0; i < e.line - 1; i++) pos += lines[i].length + 1;
+      editor.focus();
+      editor.setSelectionRange(pos, pos + (lines[e.line - 1] || '').length);
+    };
+    errorsEl.appendChild(d);
+  }
+  errorsEl.classList.add('show');
+}
+function hideErrors() {
+  shownErrCount = -1;
+  errorsEl.innerHTML = '';
+  errorsEl.classList.remove('show');
+}
+
+// ===== СТОП =====
+function later(fn, ms) {
+  timer = setTimeout(() => {
+    try { fn(); } catch (e) { fatal(e); }
+  }, ms);
+}
+// непредвиденная ошибка внутри самого редактора: остановиться и показать, а не молчать
+function fatal(e) {
+  stopAll();
+  addErr(1, 'Внутренняя ошибка: ' + (e && e.message ? e.message : e));
+  statusEl.textContent = '⚠ Внутренняя ошибка';
+  showErrors(currentErrors);
+}
+function stopAll() {
+  netStop();
+  stopMusic();
+  stopped = true;
+  clearTimeout(timer);
+  timer = null;
+  clearTimeout(tickHandle);
+  tickHandle = null;
+  clearTimeout(physHandle);
+  physHandle = null;
+  mouseIsDown = false;
+  timers = [];
+  queue = [];
+  runCtl = null;
+}
+
+// ===== ЦВЕТА =====
+// CSS.supports пропускал inherit / initial / var(...) — canvas их не понимает и
+// рисовал бы «прошлым» цветом. Поэтому спрашиваем сам canvas: два разных
+// «затравочных» цвета, если оба раза результат одинаков — цвет настоящий.
+function isColor(c) {
+  if (typeof c !== 'string' || !c.trim()) return false;
+  ctx.fillStyle = '#010203';
+  ctx.fillStyle = c;
+  const a = String(ctx.fillStyle);
+  ctx.fillStyle = '#040506';
+  ctx.fillStyle = c;
+  return a === String(ctx.fillStyle);
+}
+function checkColor(c) {
+  c = (c || '').trim();
+  if (!c) throw new Error('Не указан цвет');
+  if (!isColor(c)) throw new Error('Неверный цвет: "' + c + '"');
+  return c;
+}
+// любой цвет -> одинаковая запись (red, #f00 и #ff0000 станут равны)
+function normColor(c) {
+  ctx.fillStyle = '#000000';
+  ctx.fillStyle = c;
+  return String(ctx.fillStyle).toLowerCase();
+}
+function toRGBA(c) {
+  const n = normColor(c);
+  let m = n.match(/^#([0-9a-f]{6})$/);
+  if (m) {
+    const h = m[1];
+    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16), 1];
+  }
+  m = n.match(/^rgba?\(([^)]+)\)$/);
+  if (m) {
+    const v = m[1].split(',').map(Number);
+    return [v[0], v[1], v[2], v.length > 3 ? v[3] : 1];
+  }
+  return [255, 255, 255, 1];
+}
+function mixColor(a, b, p) {
+  const r = Math.round(a[0] + (b[0] - a[0]) * p);
+  const g = Math.round(a[1] + (b[1] - a[1]) * p);
+  const bl = Math.round(a[2] + (b[2] - a[2]) * p);
+  const al = a[3] + (b[3] - a[3]) * p;
+  return 'rgba(' + r + ',' + g + ',' + bl + ',' + al.toFixed(3) + ')';
+}
+
+// ===== ГЕОМЕТРИЯ =====
+function textW(o) {
+  ctx.font = o.fontSize + 'px sans-serif';
+  return ctx.measureText(o.text).width;
+}
+
+function shift(o, dx, dy) {
+  if (o.type === 'group') {
+    for (const c of o.children) shift(c, dx, dy);
+  } else if (o.type === 'line') {
+    o.x1 += dx; o.y1 += dy; o.x2 += dx; o.y2 += dy;
+  } else {
+    o.x += dx; o.y += dy;
+  }
+}
+
+// центр и половинки сторон прямоугольника / текста (до поворота)
+function centerBox(o) {
+  if (o.type === 'rect') {
+    return { cx: o.x + o.w / 2, cy: o.y + o.h / 2, hw: o.w / 2, hh: o.h / 2 };
+  }
+  const w = textW(o);
+  return { cx: o.x + w / 2, cy: o.y + o.fontSize / 2, hw: w / 2, hh: o.fontSize / 2 };
+}
+
+function bbox(o) {
+  switch (o.type) {
+    case 'circle':
+      return { x1: o.x - o.r, y1: o.y - o.r, x2: o.x + o.r, y2: o.y + o.r };
+    case 'line':
+      return {
+        x1: Math.min(o.x1, o.x2), y1: Math.min(o.y1, o.y2),
+        x2: Math.max(o.x1, o.x2), y2: Math.max(o.y1, o.y2)
+      };
+    case 'rect':
+    case 'text': {
+      const b = centerBox(o);
+      const r = o.rot || 0, cos = Math.cos(r), sin = Math.sin(r);
+      const ex = Math.abs(b.hw * cos) + Math.abs(b.hh * sin);
+      const ey = Math.abs(b.hw * sin) + Math.abs(b.hh * cos);
+      return { x1: b.cx - ex, y1: b.cy - ey, x2: b.cx + ex, y2: b.cy + ey };
+    }
+  }
+  let b = null;
+  for (const c of o.children) {
+    const cb = bbox(c);
+    b = b ? {
+      x1: Math.min(b.x1, cb.x1), y1: Math.min(b.y1, cb.y1),
+      x2: Math.max(b.x2, cb.x2), y2: Math.max(b.y2, cb.y2)
+    } : cb;
+  }
+  return b || { x1: 0, y1: 0, x2: 0, y2: 0 };
+}
+
+// опорная точка: центр круга, левый верхний угол остального
+function refPoint(o) {
+  if (o.type === 'line') return { x: o.x1, y: o.y1 };
+  if (o.type === 'group') { const b = bbox(o); return { x: b.x1, y: b.y1 }; }
+  return { x: o.x, y: o.y };
+}
+
+function getColor(o) {
+  return o.type === 'group' ? (o.children.length ? getColor(o.children[0]) : '#000000') : o.color;
+}
+
+// поворот вокруг точки (px, py) на угол a (радианы, по часовой стрелке)
+function rotPt(x, y, px, py, cos, sin) {
+  const dx = x - px, dy = y - py;
+  return [px + dx * cos - dy * sin, py + dx * sin + dy * cos];
+}
+function rotateRec(o, px, py, a, cos, sin) {
+  switch (o.type) {
+    case 'group':
+      for (const c of o.children) rotateRec(c, px, py, a, cos, sin);
+      return;
+    case 'circle': {
+      const p = rotPt(o.x, o.y, px, py, cos, sin);
+      o.x = p[0]; o.y = p[1];
+      if (o.n) o.rot = (o.rot || 0) + a;
+      return;
+    }
+    case 'line': {
+      const p = rotPt(o.x1, o.y1, px, py, cos, sin);
+      const q = rotPt(o.x2, o.y2, px, py, cos, sin);
+      o.x1 = p[0]; o.y1 = p[1]; o.x2 = q[0]; o.y2 = q[1];
+      return;
+    }
+    case 'rect':
+    case 'text': {
+      const b = centerBox(o);
+      const p = rotPt(b.cx, b.cy, px, py, cos, sin);
+      o.x += p[0] - b.cx;
+      o.y += p[1] - b.cy;
+      o.rot = (o.rot || 0) + a;
+      return;
+    }
+  }
+}
+
+// ===== АНИМАЦИЯ =====
+// tween = { dur, apply(p) }: p идёт от 0 до 1. Все действия складываются из
+// маленьких приращений, поэтому конец всегда точный.
+function anim(apply) {
+  if (speed > 0 && !artDepth) return { dur: speed, apply, ease: easeMode };
+  apply(1);
+  return null;
+}
+function moveTween(o, dx, dy) {
+  let ax = 0, ay = 0;
+  return p => {
+    const nx = dx * p, ny = dy * p;
+    if (nx !== ax || ny !== ay) { moveObj(o, nx - ax, ny - ay); ax = nx; ay = ny; }
+  };
+}
+function rotTween(o, rad, px, py) {
+  let applied = 0;
+  return p => {
+    const a = rad * p;
+    if (a !== applied) {
+      const d = a - applied;
+      rotateRec(o, px, py, d, Math.cos(d), Math.sin(d));
+      applied = a;
+    }
+  };
+}
+function colorTween(o, target) {
+  const to = toRGBA(target), list = [];
+  (function walk(n) {
+    if (n.type === 'group') n.children.forEach(walk);
+    else list.push({ n, from: toRGBA(n.color) });
+  })(o);
+  return p => {
+    for (const it of list) it.n.color = p >= 1 ? target : mixColor(it.from, to, p);
+  };
+}
+
+// ===== РЕНДЕР =====
+function leaves(o, fn) {
+  if (o.type === 'group') for (const c of o.children) leaves(c, fn);
+  else fn(o);
+}
+function firstLeaf(o) { return o.type === 'group' ? firstLeaf(o.children[0]) : o; }
+let fxShadow = false;
+function setFx(o) {
+  const a = o.alpha == null ? 1 : o.alpha;
+  if (ctx.globalAlpha !== a) ctx.globalAlpha = a;
+  if (o.shadow) { ctx.shadowColor = o.shadow.c; ctx.shadowBlur = o.shadow.b; fxShadow = true; }
+}
+function clearFx() {
+  if (ctx.globalAlpha !== 1) ctx.globalAlpha = 1;
+  if (fxShadow) { ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; fxShadow = false; }
+}
+function linGrad(o, x1, y1, x2, y2) {
+  const g = ctx.createLinearGradient(x1, y1, x2, y2);
+  g.addColorStop(0, o.grad[0]); g.addColorStop(1, o.grad[1]);
+  return g;
+}
+function rrPath(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+const GLOW_PASSES = [[2.4, 0.25], [1.3, 0.4], [0.6, 0.6]];
+function polyPath(o) {
+  const n = o.n, inn = o.inner > 0 ? o.inner : 0, a0 = (o.rot || 0) - Math.PI / 2;
+  ctx.beginPath();
+  const m = inn ? n * 2 : n;
+  for (let i = 0; i < m; i++) {
+    const a = a0 + i * TAU / m, r = inn && (i & 1) ? o.r * inn : o.r;
+    const px = o.x + Math.cos(a) * r, py = o.y + Math.sin(a) * r;
+    if (i) ctx.lineTo(px, py); else ctx.moveTo(px, py);
+  }
+  ctx.closePath();
+}
+function strokeIt(o) {
+  ctx.lineWidth = o.sw; ctx.strokeStyle = o.sc || '#000000'; ctx.lineJoin = 'round';
+  ctx.stroke();
+}
+function drawObj(o) {
+  if (o.glow && o.type !== 'group') {                  // неон: широкое мягкое гало + яркая сердцевина
+    const sh = o.shadow, al = o.alpha, base = al == null ? 1 : al, col = o.glow.c || o.color;
+    ctx.globalCompositeOperation = 'lighter';
+    for (const p of GLOW_PASSES) {
+      o.shadow = { c: col, b: o.glow.b * p[0] };
+      o.alpha = base * p[1];
+      drawBase(o);
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    if (sh === undefined) delete o.shadow; else o.shadow = sh;
+    if (al === undefined) delete o.alpha; else o.alpha = al;
+  }
+  drawBase(o);
+}
+function drawBase(o) {
+  switch (o.type) {
+    case 'group':
+      for (const c of o.children) drawObj(c);
+      return;
+    case 'circle': {
+      setFx(o);
+      if (o.grad) {
+        const g = ctx.createRadialGradient(o.x - o.r * 0.35, o.y - o.r * 0.35, 0, o.x, o.y, o.r);
+        g.addColorStop(0, o.grad[0]); g.addColorStop(1, o.grad[1]);
+        ctx.fillStyle = g;
+      } else ctx.fillStyle = o.color;
+      if (o.n) polyPath(o); else { ctx.beginPath(); ctx.arc(o.x, o.y, o.r, 0, TAU); }
+      ctx.fill();
+      if (o.sw > 0) strokeIt(o);
+      clearFx();
+      return;
+    }
+    case 'rect': {
+      if (o.img && drawSprite(o)) return;
+      setFx(o);
+      const hw = o.w / 2, hh = o.h / 2;
+      if (!o.rot && !o.vis) {
+        ctx.fillStyle = o.grad ? linGrad(o, 0, o.y, 0, o.y + o.h) : o.color;
+        if (o.rad > 0 && o.w > 0 && o.h > 0) { rrPath(o.x, o.y, o.w, o.h, Math.min(o.rad, hw, hh)); ctx.fill(); if (o.sw > 0) strokeIt(o); }
+        else { ctx.fillRect(o.x, o.y, o.w, o.h); if (o.sw > 0) { ctx.lineWidth = o.sw; ctx.strokeStyle = o.sc || '#000000'; ctx.lineJoin = 'round'; ctx.strokeRect(o.x, o.y, o.w, o.h); } }
+        clearFx();
+        return;
+      }
+      ctx.save();
+      ctx.translate(o.x + hw, o.y + hh);
+      if (o.rot || o.vis) ctx.rotate((o.rot || 0) + (o.vis || 0));
+      ctx.fillStyle = o.grad ? linGrad(o, 0, -hh, 0, hh) : o.color;
+      if (o.rad > 0 && o.w > 0 && o.h > 0) {
+        rrPath(-hw, -hh, o.w, o.h, Math.min(o.rad, hw, hh));
+        ctx.fill();
+        if (o.sw > 0) strokeIt(o);
+      } else {
+        ctx.fillRect(-hw, -hh, o.w, o.h);
+        if (o.sw > 0) { ctx.lineWidth = o.sw; ctx.strokeStyle = o.sc || '#000000'; ctx.lineJoin = 'round'; ctx.strokeRect(-hw, -hh, o.w, o.h); }
+      }
+      ctx.restore();
+      clearFx();
+      return;
+    }
+    case 'text': {
+      setFx(o);
+      ctx.font = o.fontSize + 'px sans-serif';
+      ctx.textBaseline = 'top';
+      if (o._tt !== o.text || o._tf !== o.fontSize) { o._tw = ctx.measureText(o.text).width; o._tt = o.text; o._tf = o.fontSize; }
+      const w = o._tw;
+      ctx.save();
+      ctx.translate(o.x + w / 2, o.y + o.fontSize / 2);
+      if (o.rot) ctx.rotate(o.rot);
+      ctx.fillStyle = o.grad ? linGrad(o, -w / 2, 0, w / 2, 0) : o.color;
+      if (o.sw > 0 && !o.wave) { ctx.lineWidth = o.sw; ctx.strokeStyle = o.sc || '#000000'; ctx.lineJoin = 'round'; ctx.strokeText(o.text, -w / 2, -o.fontSize / 2); }
+      if (o.wave) waveText(o, w); else ctx.fillText(o.text, -w / 2, -o.fontSize / 2);
+      ctx.restore();
+      clearFx();
+      return;
+    }
+    case 'line':
+      setFx(o);
+      ctx.strokeStyle = o.color;
+      ctx.lineWidth = o.lw || 2;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(o.x1, o.y1);
+      ctx.lineTo(o.x2, o.y2);
+      ctx.stroke();
+      clearFx();
+      return;
+  }
+}
+
+// выкидываем удалённые объекты из списка, чтобы он не разрастался
+function compact() {
+  if (deadCount > 0 && !groupStack.length && !artDepth) {
+    objects = objects.filter(o => !o.deleted);
+    deadCount = 0;
+  }
+}
+let rafId = 0;
+function render() {                       // просит перерисовать; рисуем один раз за кадр экрана
+  if (rafId) return;
+  rafId = requestAnimationFrame(() => { rafId = 0; try { renderNow(); } catch (e) { fatal(e); } });
+}
+function renderNow() {
+  if (!stage.classList.contains('show')) return;
+  if (deadCount > 200) compact();
+  // размер меняем только если он правда поменялся (это дорогая операция)
+  if (canvas.width !== canvasW) canvas.width = canvasW;
+  if (canvas.height !== canvasH) canvas.height = canvasH;
+  ctx.fillStyle = bgColor;
+  ctx.fillRect(0, 0, canvasW, canvasH);
+  xBack();
+  ctx.save();
+  xCam();
+  let list = objects, hasL = false, sorted = true, prevL = -Infinity;
+  for (let i = 0; i < objects.length; i++) {
+    const l = objects[i].layer || 0;
+    if (l) hasL = true;
+    if (l < prevL) sorted = false;
+    prevL = l;
+  }
+  if (hasL && !sorted) list = objects.slice().sort((a, b) => (a.layer || 0) - (b.layer || 0));
+  for (let i = 0; i < list.length; i++) {
+    const o = list[i];
+    if (!o.deleted) drawObj(o);
+  }
+  xFront();
+  ctx.restore();
+  xPost();
+}
+
+// ===== ПОИСК И ДОБАВЛЕНИЕ =====
+function byName(name) {
+  for (let i = objects.length - 1; i >= scopeStart; i--) {
+    const o = objects[i];
+    if (o.name === name && !o.deleted) return o;
+  }
+  return null;
+}
+function last() {
+  for (let i = objects.length - 1; i >= scopeStart; i--) {
+    if (!objects[i].deleted) return objects[i];
+  }
+  return null;
+}
+function markDead(o) {
+  if (!o.deleted) { o.deleted = true; deadCount++; }
+}
+function addObj(o) {
+  if (objects.length >= MAX_OBJECTS) {
+    compact();
+    if (objects.length >= MAX_OBJECTS) {
+      throw new Error('Слишком много объектов (больше ' + MAX_OBJECTS + ')');
+    }
+  }
+  objects.push(o);
+}
+
+// касаются ли два объекта: круги — по расстоянию, остальное — по рамкам
+function hitBox(o) {
+  const b = bbox(o), k = o.hb;
+  if (!k) return b;
+  const cx = (b.x1 + b.x2) / 2, cy = (b.y1 + b.y2) / 2, hw = (b.x2 - b.x1) / 2 * k, hh = (b.y2 - b.y1) / 2 * k;
+  return { x1: cx - hw, y1: cy - hh, x2: cx + hw, y2: cy + hh };
+}
+function touching(a, b) {
+  if (a.type === 'circle' && b.type === 'circle' && !a.n && !b.n && !a.hb && !b.hb) {
+    return Math.hypot(a.x - b.x, a.y - b.y) <= a.r + b.r;
+  }
+  const p = hitBox(a), q = hitBox(b);
+  return p.x1 <= q.x2 && p.x2 >= q.x1 && p.y1 <= q.y2 && p.y2 >= q.y1;
+}
+
+// ===== УСЛОВИЯ (//but) =====
+function propOf(o, prop) {
+  switch (prop) {
+    case 'x': return refPoint(o).x;
+    case 'y': return refPoint(o).y;
+    case 'w': { const b = bbox(o); return b.x2 - b.x1; }
+    case 'h': { const b = bbox(o); return b.y2 - b.y1; }
+    case 'color': return normColor(getColor(o));
+    case 'vx': return o.vx || 0;
+    case 'vy': return o.vy || 0;
+    case 'hp':
+      if (o.hp === undefined) throw new Error('У "' + o.name + '" нет hp — задай /hp ' + o.name + ' 100');
+      return o.hp;
+  }
+  throw new Error('//but: нет свойства "' + prop + '" (есть x, y, w, h, hp, vx, vy, color)');
+}
+
+// одна сторона условия: число / выражение, либо слово или цвет
+function evalSide(s) {
+  try {
+    return calc(s);
+  } catch (e) {
+    if (!(e instanceof NotMath)) throw e;
+  }
+  const m = s.match(/^([^\s.$]+)\.([\p{L}]+)$/u);
+  if (m) {
+    const o = byName(m[1]);
+    if (!o) throw new Error('//but: "' + m[1] + '" не найден');
+    return propOf(o, m[2].toLowerCase());
+  }
+  const v = subst(s).trim();
+  return isColor(v) ? normColor(v) : v.toLowerCase();
+}
+
+function compare(a, op, b) {
+  if (typeof a === 'string' || typeof b === 'string') {
+    if (op === '==') return a === b;
+    if (op === '!=') return a !== b;
+    throw new Error('//but: для цветов и слов работают только == и !=');
+  }
+  switch (op) {
+    case '==': return Math.abs(a - b) < 1e-9;
+    case '!=': return Math.abs(a - b) >= 1e-9;
+    case '>': return a > b;
+    case '<': return a < b;
+    case '>=': return a >= b;
+    case '<=': return a <= b;
+  }
+  return false;
+}
+
+// превращает текст условия в функцию (один раз, а не при каждой проверке)
+function compileCond(s) {
+  let m = s.match(/^mouse\s*(down|up)$/i);
+  if (m) { const want = m[1].toLowerCase() === 'down'; return () => mouseIsDown === want; }
+  m = s.match(/^saved(?:\s+(\S+))?$/i);
+  if (m) {
+    const slot = m[1] || 'main';
+    return () => { try { return localStorage.getItem('rabbit_state_' + slot) !== null; } catch (e) { return false; } };
+  }
+  m = s.match(/^(\S+)\s+(exists|!exists)$/i);
+  if (m) {
+    const name = m[1];
+    const want = m[2].toLowerCase() === 'exists';
+    return () => (byName(name) !== null) === want;
+  }
+  m = s.match(/^(\S+)\s+(!?touch(?:es)?)\s+(\S+)$/i);
+  if (m) {
+    const A = m[1], B = m[3], want = m[2][0] !== '!';
+    return () => {
+      for (const n of [A, B]) {
+        if (!everNames.has(n)) throw new Error('//but: объект "' + n + '" не найден (нужен /id ' + n + ')');
+      }
+      const a = byName(A), b = byName(B);
+      return (!!a && !!b && touching(a, b)) === want;
+    };
+  }
+  m = s.match(/^(.+?)\s*(==|!=|>=|<=|>|<)\s*(.+)$/);
+  if (!m) throw new Error('//but: не понял условие. Пример: //but ball.x > 300');
+  const L = m[1].trim(), op = m[2], R = m[3].trim();
+  return () => compare(evalSide(L), op, evalSide(R));
+}
+
+// ===== ПАРСЕР: строки -> дерево =====
+const KIND_NAME = { repeat: '/repeat', if: '//but', art: '/art', memory: '/memory', tap: '//tap', timer: '/timer', key: '//key', net: '//net' };
+const PURE_NUM = /^[\d.,+\-*/%()]+$/;       // число или выражение без переменных
+const PURE_NUM_LINE = /^[\d.,\s+\-*/%()]*$/;
+
+function parseTapSpec(arg) {
+  const usage = '//tap x1 y1 x2 y2  (или  //tap имя)';
+  const t = arg.trim() === '' ? [] : arg.trim().split(/\s+/);
+  if (t.length === 4) {
+    if (t.every(tok => PURE_NUM.test(tok))) {
+      const v = t.map(num);
+      if (v.some(x => !isFinite(x))) throw new Error(usage);
+      return {
+        box: {
+          x1: Math.min(v[0], v[2]), y1: Math.min(v[1], v[3]),
+          x2: Math.max(v[0], v[2]), y2: Math.max(v[1], v[3])
+        }
+      };
+    }
+    // с переменными: проверим уже в момент нажатия
+    const ok = t.every(tok => PURE_NUM.test(tok) || tok.indexOf('$') >= 0 || /^[^\s.$]+\.[xywh]/.test(tok));
+    if (!ok) throw new Error(usage);
+    return { toks: t };
+  }
+  if (t.length === 1) return { name: t[0] };
+  throw new Error(usage);
+}
+
+function closeFrame(f) {
+  if ((f.kind === 'art' || f.kind === 'memory') && f.name) {
+    const table = f.kind === 'art' ? defs.art : defs.mem;
+    if (table[f.name]) addErr(f.line, 'имя "' + f.name + '" уже занято');
+    else table[f.name] = { body: f.list, flat: null, line: f.line };
+  } else if (f.kind === 'tap' && f.spec) {
+    taps.push({
+      box: f.spec.box || null, toks: f.spec.toks || null, name: f.spec.name || null,
+      body: f.list, flat: null, line: f.line
+    });
+  } else if (f.kind === 'key' && f.spec) {
+    taps.push({ keys: f.spec.keys, body: f.list, flat: null, line: f.line });
+  } else if (f.kind === 'net' && f.spec) {
+    taps.push({ net: f.spec.net, body: f.list, flat: null, line: f.line });
+  }
+}
+
+function parse(lines) {
+  const root = [];
+  const stack = [{ kind: 'root', list: root }];
+  const inDef = () => stack.some(f => f.kind === 'art' || f.kind === 'memory' || f.kind === 'tap' || f.kind === 'key' || f.kind === 'net');
+
+  for (const l of lines) {
+    const t = l.text.trim();
+    const sp = t.search(/\s/);
+    const w = (sp < 0 ? t : t.slice(0, sp)).toLowerCase();
+    const arg = sp < 0 ? '' : t.slice(sp + 1).trim();
+    const top = stack[stack.length - 1];
+
+    if (w === '/repeat') {
+      // число без переменных проверяем сразу, остальное — в момент выполнения
+      if (PURE_NUM_LINE.test(arg) && !(numArg(arg) >= 0)) {
+        addErr(l.num, '/repeat N — после слова нужно число');
+      }
+      const node = { type: 'repeat', arg, body: [], line: l.num };
+      top.list.push(node);
+      stack.push({ kind: 'repeat', list: node.body, line: l.num });
+    } else if (w === '//but') {
+      if (!arg) addErr(l.num, '//but условие. Пример: //but ball.x > 300');
+      const node = { type: 'if', cond: arg, test: null, body: [], elseBody: null, line: l.num };
+      top.list.push(node);
+      stack.push({ kind: 'if', node, list: node.body, line: l.num });
+    } else if (w === '//else') {
+      if (top.kind !== 'if') addErr(l.num, '//else без //but');
+      else if (top.node.elseBody) addErr(l.num, 'второй //else в одном //but');
+      else { top.node.elseBody = []; top.list = top.node.elseBody; }
+    } else if (w === '/art' || w === '/memory') {
+      let ok = true;
+      if (!/^[^\s.]+$/.test(arg)) { addErr(l.num, w + ' имя — имя без пробелов и точек'); ok = false; }
+      if (inDef()) { addErr(l.num, w + ' нельзя внутри /art, /memory или //tap'); ok = false; }
+      stack.push({ kind: w === '/art' ? 'art' : 'memory', name: ok ? arg : null, list: [], line: l.num });
+    } else if (w === '//tap') {
+      let spec = null;
+      try { spec = parseTapSpec(arg); } catch (e) { addErr(l.num, e.message); }
+      if (stack.length > 1) {
+        addErr(l.num, '//tap нельзя внутри другого блока — ставь его на самом верхнем уровне');
+        spec = null;
+      }
+      stack.push({ kind: 'tap', spec, list: [], line: l.num });
+    } else if (w === '//key') {
+      const ks = arg.split(/\s+/).filter(Boolean).map(normKey);
+      if (!ks.length) addErr(l.num, '//key клавиша  (например: //key w  или  //key up left)');
+      let spec = ks.length ? { keys: ks } : null;
+      if (stack.length > 1) {
+        addErr(l.num, '//key нельзя внутри другого блока — ставь его на самом верхнем уровне');
+        spec = null;
+      }
+      stack.push({ kind: 'key', spec, list: [], line: l.num });
+    } else if (w === '//net') {
+      let spec = /^[^\s.]+$/.test(arg) ? { net: arg } : null;
+      if (!spec) addErr(l.num, '//net имя — например: //net hit (сработает, когда другой игрок пошлёт /netsend hit)');
+      if (stack.length > 1) {
+        addErr(l.num, '//net нельзя внутри другого блока — ставь его на самом верхнем уровне');
+        spec = null;
+      }
+      stack.push({ kind: 'net', spec, list: [], line: l.num });
+    } else if (w === '/timer') {
+      const tk = arg.split(/\s+/).filter(Boolean);
+      if (tk[0] && tk[0].toLowerCase() === 'delete') {
+        // /timer delete имя сек — одна строка, без /end
+        if (tk.length !== 3) addErr(l.num, '/timer delete имя сек — например: /timer delete bullet 2');
+        else top.list.push({ type: 'timer', del: tk[1], secArg: tk[2], line: l.num });
+      } else {
+        if (tk.length < 2 || tk.length > 3) addErr(l.num, '/timer имя сек [раз] — например: /timer tick 2 5');
+        else {
+          if (!/^[^\s.]+$/.test(tk[0])) addErr(l.num, '/timer: имя без пробелов и точек');
+          if (PURE_NUM.test(tk[1]) && !(num(tk[1]) > 0)) addErr(l.num, '/timer: секунды — число больше 0');
+        }
+        const node = { type: 'timer', arg, body: [], flat: null, line: l.num };
+        allTimerNodes.push(node);
+        top.list.push(node);
+        stack.push({ kind: 'timer', list: node.body, line: l.num });
+      }
+    } else if (w === '/end') {
+      if (stack.length === 1) addErr(l.num, '/end без пары');
+      else closeFrame(stack.pop());
+    } else {
+      top.list.push({ type: 'cmd', w, arg, text: t, line: l.num });
+    }
+  }
+
+  while (stack.length > 1) {
+    const f = stack.pop();
+    addErr(f.line, KIND_NAME[f.kind] + ' без /end');
+    closeFrame(f);
+  }
+  return root;
+}
+
+// ===== БАЙТКОД =====
+// Дерево команд компилируется в байткод. Программа — это плоский массив Int32,
+// по три слова на инструкцию: [операция, A, B]. Рядом лежат таблица строк кода
+// (для ошибок) и пул констант (команды, условия, тексты). /repeat и //but
+// превращаются в прыжки; число повторов считается уже во время работы
+// (поэтому можно /repeat $n). Выполняет байткод виртуальная машина — pump().
+//
+//   HALT                    конец блока
+//   CMD    k                выполнить команду из пула констант k
+//   IF     k  else          если условие k ложно — прыгнуть на else
+//   JMP    to               безусловный прыжок
+//   REP    k  end           начало /repeat: посчитать N (текст k), открыть счётчик
+//   REPEND start            конец /repeat: повторить с start+1 или закрыть счётчик
+//   TIMER  k                /timer имя сек [раз] ... /end
+//   TIMERDEL k              /timer delete имя сек
+//   DELAY  k   WAIT k   DO k    /delay, /wait, /do — выделены в отдельные операции
+const OP = { HALT: 0, CMD: 1, IF: 2, JMP: 3, REP: 4, REPEND: 5, TIMER: 6, TIMERDEL: 7, DELAY: 8, WAIT: 9, DO: 10 };
+const OP_NAME = ['HALT', 'CMD', 'IF', 'JMP', 'REP', 'REPEND', 'TIMER', 'TIMERDEL', 'DELAY', 'WAIT', 'DO'];
+const STRIDE = 3;
+
+class Prog {
+  constructor(code, lines, k) {
+    this.code = code;                 // Int32Array: операция, A, B, операция, A, B ...
+    this.lines = lines;               // Int32Array: номер строки кода для каждой инструкции
+    this.k = k;                       // пул констант
+    this.len = code.length / STRIDE;  // сколько инструкций
+  }
+}
+
+function compile(items, line, overMsg) {
+  const code = [], lines = [], k = [], kidx = new Map();
+  let over = false;
+  const konst = v => { let i = kidx.get(v); if (i === undefined) { i = k.length; k.push(v); kidx.set(v, i); } return i; };
+  const here = () => code.length / STRIDE;
+  function emit(op, a, b, ln) {
+    if (here() >= MAX_COMMANDS) { over = true; return -1; }
+    code.push(op, a, b); lines.push(ln || 0);
+    return here() - 1;
+  }
+  function gen(list) {
+    for (const b of list) {
+      if (over) return;
+      if (b.type === 'repeat') {
+        const at = emit(OP.REP, konst(b.arg), -1, b.line);
+        if (at < 0) return;
+        gen(b.body);
+        if (here() === at + 1) { code.length = at * STRIDE; lines.length = at; continue; }   // пустой повтор
+        if (emit(OP.REPEND, at, 0, b.line) < 0) return;
+        code[at * STRIDE + 2] = here();
+      } else if (b.type === 'if') {
+        if (!b.test) {
+          try { b.test = compileCond(b.cond); }
+          catch (e) { addErr(b.line, e.message); b.test = () => false; }
+          b.test.src = b.cond;
+        }
+        const at = emit(OP.IF, konst(b.test), -1, b.line);
+        if (at < 0) return;
+        gen(b.body);
+        if (b.elseBody) {
+          const j = emit(OP.JMP, -1, 0, b.line);
+          code[at * STRIDE + 2] = here();
+          gen(b.elseBody);
+          if (j >= 0) code[j * STRIDE + 1] = here();
+        } else {
+          code[at * STRIDE + 2] = here();
+        }
+      } else if (b.type === 'timer') {
+        emit(b.del !== undefined ? OP.TIMERDEL : OP.TIMER, konst(b), 0, b.line);
+      } else {
+        const op = b.w === '/delay' ? OP.DELAY : b.w === '/wait' ? OP.WAIT : b.w === '/do' ? OP.DO : OP.CMD;
+        emit(op, konst(b), 0, b.line);
+      }
+    }
+  }
+  gen(items);
+  const end = here();
+  for (let i = 0; i < end; i++) {         // недописанные прыжки (программа обрезана) ведут в конец
+    const o = code[i * STRIDE];
+    if ((o === OP.IF || o === OP.REP) && code[i * STRIDE + 2] < 0) code[i * STRIDE + 2] = end;
+    if (o === OP.JMP && code[i * STRIDE + 1] < 0) code[i * STRIDE + 1] = end;
+  }
+  code.push(OP.HALT, 0, 0); lines.push(0);
+  if (over) addErr(line || 1, overMsg);
+  return new Prog(Int32Array.from(code), Int32Array.from(lines), k);
+}
+
+function flatOf(def) {
+  if (!def.flat) {
+    def.flat = compile(def.body, def.line, 'Слишком много команд в блоке (больше ' + MAX_COMMANDS + ')');
+  }
+  return def.flat;
+}
+
+// ----- дизассемблер: показывает, во что превратился код -----
+function disasm(P, title) {
+  const p4 = n => String(n).padStart(4, '0');
+  const h2 = n => (n & 255).toString(16).padStart(2, '0');
+  const h4 = n => (n & 65535).toString(16).padStart(4, '0');
+  const out = [title + '   [' + P.len + ' инстр. · ' + P.k.length + ' конст. · ' + (P.code.length + P.lines.length) * 4 + ' байт]'];
+  for (let i = 0; i < P.len; i++) {
+    const at = i * STRIDE, op = P.code[at], a = P.code[at + 1], b = P.code[at + 2];
+    let arg = '';
+    switch (op) {
+      case OP.CMD: case OP.DELAY: case OP.WAIT: case OP.DO: arg = P.k[a].text; break;
+      case OP.IF: arg = (P.k[a].src || '?') + '   ложь → ' + p4(b); break;
+      case OP.JMP: arg = '→ ' + p4(a); break;
+      case OP.REP: arg = P.k[a] + '   конец → ' + p4(b); break;
+      case OP.REPEND: arg = '→ ' + p4(a + 1); break;
+      case OP.TIMER: arg = P.k[a].arg + '   { блок }'; break;
+      case OP.TIMERDEL: arg = 'delete ' + P.k[a].del + ' ' + P.k[a].secArg; break;
+    }
+    out.push('  ' + p4(i) + '  ' + h2(op) + ' ' + h4(a) + ' ' + h4(b) + '  ' + OP_NAME[op].padEnd(8) + ' ' + arg + (P.lines[i] ? '   ; строка ' + P.lines[i] : ''));
+  }
+  return out.join('\n');
+}
+
+// строки программы без пустых и комментариев
+function sourceLines() {
+  const rawLines = editor.value.split('\n'), lines = [];
+  for (let i = 0; i < rawLines.length; i++) {
+    const t = rawLines[i].trim();
+    if (!t || t.startsWith('#')) continue;
+    lines.push({ text: t, num: i + 1 });
+  }
+  return lines;
+}
+
+// разбор и компиляция «как при запуске», но без выполнения
+function bytecodeReport() {
+  defs = newDefs(); taps = []; allTimerNodes = []; currentErrors = []; errKeys = new Set();
+  const tree = parse(sourceLines());
+  const main = compile(tree, 1, 'Слишком много команд (больше ' + MAX_COMMANDS + '), остальное обрезано');
+  const parts = [['main', main]];
+  for (const n in defs.art) parts.push(['/art ' + n + '  (строка ' + defs.art[n].line + ')', flatOf(defs.art[n])]);
+  for (const n in defs.mem) parts.push(['/memory ' + n + '  (строка ' + defs.mem[n].line + ')', flatOf(defs.mem[n])]);
+  for (const h of taps) {
+    const what = h.keys ? '//key ' + h.keys.join(' ') : h.net ? '//net ' + h.net : h.name ? '//tap ' + h.name
+      : h.box ? '//tap ' + [h.box.x1, h.box.y1, h.box.x2, h.box.y2].join(' ') : '//tap ' + h.toks.join(' ');
+    parts.push([what + '  (строка ' + h.line + ')', flatOf(h)]);
+  }
+  for (const n of allTimerNodes) parts.push(['/timer ' + n.arg + '  (строка ' + n.line + ')', flatOf(n)]);
+  let ins = 0, bytes = 0;
+  for (const p of parts) { ins += p[1].len; bytes += (p[1].code.length + p[1].lines.length) * 4; }
+  return {
+    text: parts.map(p => disasm(p[1], p[0])).join('\n\n'),
+    info: 'Блоков: ' + parts.length + ' · инструкций: ' + ins + ' · байткод: ' + bytes + ' байт · ошибок: ' + currentErrors.length +
+      '\nСтолбцы: адрес · байты (операция A B, hex) · операция · операнды · строка кода'
+  };
+}
+
+// ===== ИНТЕРПРЕТАТОР =====
+// Возвращает: null — всё выполнено, YIELD — дать экрану отдохнуть,
+// объект { dur, apply } — подождать/проиграть анимацию dur секунд
+function pump(stack, noDelay, deadline) {
+  while (stack.length) {
+    const f = stack[stack.length - 1], P = f.cmds;
+    if (f.i >= P.len) { stack.pop(); continue; }
+
+    // даже если идут одни прыжки, раз в 256 шагов даём экрану отдохнуть
+    if (!noDelay && steps > 0 && (steps & 255) === 0 && performance.now() > deadline) return YIELD;
+
+    const at = f.i * STRIDE, op = P.code[at], a = P.code[at + 1], b = P.code[at + 2], line = P.lines[f.i];
+    f.i++;
+
+    if (++steps > MAX_STEPS) {
+      addErr(line || 1, 'Слишком много действий — остановил, чтобы не зависло');
+      stack.length = 0;
+      return null;
+    }
+
+    switch (op) {
+      case OP.HALT:
+        f.i = P.len;
+        continue;
+      case OP.JMP:
+        f.i = a;
+        continue;
+      case OP.IF: {
+        let ok = false;
+        try { ok = P.k[a](); } catch (e) { addErr(line, e.message); }
+        if (!ok) f.i = b;
+        continue;
+      }
+      case OP.TIMER:
+      case OP.TIMERDEL: {
+        const c = P.k[a];
+        try { if (op === OP.TIMERDEL) startDeleteTimer(c); else startTimer(c); } catch (e) { addErr(line, e.message); }
+        continue;
+      }
+      case OP.REP: {
+        let n = NaN;
+        try { n = Math.floor(numArg(subst(P.k[a]))); }
+        catch (e) { addErr(line, e.message); f.i = b; continue; }
+        if (!isFinite(n) || n < 0) {
+          addErr(line, '/repeat N — нужно число 0 или больше');
+          f.i = b;
+          continue;
+        }
+        if (n === 0) { f.i = b; continue; }
+        (f.loops || (f.loops = [])).push({ left: n });
+        continue;
+      }
+      case OP.REPEND: {
+        const L = f.loops[f.loops.length - 1];
+        if (--L.left > 0) f.i = a + 1;
+        else f.loops.pop();
+        continue;
+      }
+      case OP.DELAY: {
+        const c = P.k[a];
+        let sec = NaN;
+        try { sec = numArg(subst(c.arg)); }
+        catch (e) { addErr(line, e.message); continue; }
+        if (!isFinite(sec) || sec < 0) { addErr(line, '/delay сек — нужно число'); continue; }
+        if (noDelay || sec === 0) continue;   // внутри /art задержки не нужны
+        return { dur: sec, apply: null };
+      }
+      case OP.WAIT: {
+        const c = P.k[a];
+        let sec = NaN;
+        try { sec = numArg(subst(c.arg)); }
+        catch (e) { addErr(line, e.message); continue; }
+        if (!isFinite(sec) || sec < 0) { addErr(line, '/wait сек — нужно число'); continue; }
+        if (noDelay || sec === 0) continue;
+        try {
+          waitTimer(stack.map(fr => ({ cmds: fr.cmds, i: fr.i, loops: fr.loops ? fr.loops.map(l => ({ left: l.left })) : undefined })), sec, line);
+        } catch (e) { addErr(line, e.message); continue; }
+        stack.length = 0;      // остаток блока продолжится позже, остальное не ждёт
+        return null;
+      }
+      case OP.DO: {
+        const c = P.k[a];
+        let name;
+        try { name = subst(c.arg); }
+        catch (e) { addErr(line, e.message); continue; }
+        const m = defs.mem[name];
+        if (!m) addErr(line, '/do: память "' + name + '" не найдена (создай её через /memory)');
+        else if (stack.length >= MAX_DEPTH) addErr(line, '/do: слишком глубоко (память вызывает сама себя?)');
+        else stack.push({ cmds: flatOf(m), i: 0 });
+        continue;
+      }
+    }
+
+    // OP.CMD — обычная команда
+    let tw = null;
+    try {
+      tw = execCmd(P.k[a]);
+    } catch (e) {
+      addErr(line, e.message);
+    }
+    if (tw) return tw;
+
+    if (!noDelay && performance.now() > deadline) return YIELD;
+  }
+  return null;
+}
+
+// ===== ЗАПУСК =====
+function run() {
+  stopAll();
+  paused = false;
+  setPauseIcon();
+  objects = [];
+  nextId = 1;
+  deadCount = 0;
+  currentColor = '#ffffff';
+  bgColor = '#000000';
+  canvasW = 800;
+  canvasH = 600;
+  speed = 0;
+  vars = Object.create(null);
+  vars.mouseX = 0; vars.mouseY = 0;
+  lists = Object.create(null);
+  gravity = 0; curLW = 2; easeMode = 'linear';
+  touchSounds = []; mouseIsDown = false;
+  xReset();
+  netReset();
+  clearTimeout(physHandle); physHandle = null;
+  groupStack = [];
+  groupBase = 0;
+  scopeStart = 0;
+  artDepth = 0;
+  steps = 0;
+  defs = newDefs();
+  taps = [];
+  queue = [];
+  timers = [];
+  everTimers = new Set();
+  everNames = new Set();
+  allTimerNodes = [];
+  vclock = 0;
+  currentErrors = [];
+  errKeys = new Set();
+  hideErrors();
+
+  const tree = parse(sourceLines());
+  const main = compile(tree, 1, 'Слишком много команд (больше ' + MAX_COMMANDS + '), остальное обрезано');
+
+  // проверяем все блоки заранее, чтобы ошибки в условиях были видны сразу,
+  // а не только когда блок впервые сработает
+  for (const d of Object.values(defs.art)) flatOf(d);
+  for (const d of Object.values(defs.mem)) flatOf(d);
+  for (const h of taps) flatOf(h);
+  for (const n of allTimerNodes) flatOf(n);
+
+  const stack = [{ cmds: main, i: 0 }];
+  let current = null;        // что сейчас выполняется из очереди (нажатие или таймер)
+  let busy = true;           // что-то выполняется или проигрывается
+  let mainDone = false;      // основная программа дошла до конца (объекты уже созданы)
+  stopped = false;
+  statusEl.textContent = '▶ Работает...';
+  if (X.active) wakePhys();
+
+  function updateStatus() {
+    const n = objects.reduce((a, o) => a + (o.deleted ? 0 : 1), 0);
+    const tm = timers.length ? ' · ⏱ ' + timers.length : '';
+    statusEl.textContent = currentErrors.length
+      ? '⚠ Ошибок: ' + currentErrors.length + ' · объектов: ' + n + tm
+      : (taps.length ? '👆 Жду нажатий · объектов: ' + n + tm
+        : physNeeded() ? '🎬 Физика · объектов: ' + n + tm
+        : (timers.length ? '⏱ Таймеры: ' + timers.length + ' · объектов: ' + n
+          : '✅ Готово · объектов: ' + n));
+    if (currentErrors.length !== shownErrCount) showErrors(currentErrors);
+  }
+
+  // всё выполнено: показываем итог и берёмся за следующее нажатие
+  function settle() {
+    mainDone = true;
+    if (current) { current.pending = false; current = null; }
+    while (groupStack.length) addErr(groupStack.pop().line, '/group без //s');
+    render();
+    updateStatus();
+    if (queue.length) startNext();
+    else {
+      busy = false;
+      if (!taps.length && !timers.length && !physNeeded() && !net.active) stopped = true;
+    }
+  }
+
+  function startNext() {
+    const h = queue.shift();
+    current = h;
+    if (h.cont) stack.push(...h.cont);
+    else stack.push({ cmds: flatOf(h.def || h), i: 0 });
+    steps = 0;
+    busy = true;
+    if (!paused) statusEl.textContent = '▶ Работает...';
+    step();
+  }
+
+  function animate(tw) {
+    let elapsed = 0, lastT = performance.now();
+    const total = tw.dur * 1000;
+    (function frame() {
+      if (stopped) return;
+      const now = performance.now();
+      if (paused) { lastT = now; later(frame, 100); return; }   // на паузе время стоит
+      elapsed += now - lastT;
+      lastT = now;
+      const p = Math.min(1, elapsed / total);
+      if (tw.apply) tw.apply(p >= 1 ? 1 : (EASE[tw.ease] ? EASE[tw.ease](p) : p));
+      render();
+      if (p >= 1) step();
+      else later(frame, FRAME_MS);
+    })();
+  }
+
+  function step() {
+    if (stopped) return;
+    if (paused) { later(step, 100); return; }
+    const r = pump(stack, false, performance.now() + SLICE_MS);
+    if (r === null) { settle(); return; }
+    if (r === YIELD) { render(); later(step, 0); return; }
+    animate(r);
+  }
+
+  // область нажатия: числа, переменные и имя объекта проверяем в момент нажатия
+  function tapBox(h) {
+    if (h.box) return h.box;
+    if (h.toks) {
+      let v;
+      try { v = h.toks.map(t => num(subst(t))); }
+      catch (e) { addErr(h.line, e.message); return null; }
+      if (v.some(x => !isFinite(x))) { addErr(h.line, '//tap: не понял числа'); return null; }
+      return {
+        x1: Math.min(v[0], v[2]), y1: Math.min(v[1], v[3]),
+        x2: Math.max(v[0], v[2]), y2: Math.max(v[1], v[3])
+      };
+    }
+    const o = byName(h.name);
+    if (!o) {
+      // объект мог быть временно удалён — это не ошибка; ошибка только если такого имени не было никогда
+      if (mainDone && !everNames.has(h.name)) addErr(h.line, '//tap: объект "' + h.name + '" не найден');
+      return null;
+    }
+    return bbox(o);
+  }
+  // names — как называется нажатая клавиша (w, up, space ...), repeat — клавишу держат
+  function onKey(names, repeat) {
+    let hit = false;
+    for (const h of taps) {
+      if (!h.keys || !h.keys.some(k => names.indexOf(k) >= 0)) continue;
+      hit = true;
+      if (repeat && queue.includes(h)) continue;     // зажатая клавиша не копит очередь
+      if (queue.length < MAX_TAP_QUEUE) queue.push(h);
+    }
+    if (hit && !busy && queue.length) startNext();
+    return hit;
+  }
+  function onTap(x, y) {
+    for (const h of taps) {
+      if (h.keys || h.net) continue;
+      const b = tapBox(h);
+      if (b && x >= b.x1 && x <= b.x2 && y >= b.y1 && y <= b.y2 && queue.length < MAX_TAP_QUEUE) {
+        queue.push(h);
+      }
+    }
+    if (!busy && queue.length) startNext();
+    else if (!busy && currentErrors.length !== shownErrCount) updateStatus();
+  }
+  // ----- таймеры -----
+  // Сработавший таймер встаёт в ту же очередь, что и нажатия, и выполняется,
+  // когда программа свободна. Время считаем само (на паузе оно стоит).
+  function schedTick() {
+    tickHandle = setTimeout(() => {
+      try { timerTick(); } catch (e) { fatal(e); }
+    }, TICK_MS);
+  }
+  function timerTick() {
+    tickHandle = null;
+    if (stopped) return;
+    const now = performance.now();
+    if (!paused) vclock += now - lastWall;
+    lastWall = now;
+    if (!paused) {
+      let changed = false;
+      for (const t of timers) {
+        if (t.dead || t.pending || vclock < t.due) continue;
+        if (t.delObj) {                       // /timer delete — удаляем сразу, программа может быть занята
+          markDead(t.delObj);
+          t.dead = true;
+          changed = true;
+          continue;
+        }
+        if (queue.length >= MAX_TAP_QUEUE) break;
+        t.pending = true;                       // пока прошлый запуск не закончен, новый не ставим
+        queue.push(t);
+        t.due = Math.max(t.due + t.every, vclock);   // опоздали — не копим «долг» запусков
+        if (--t.left <= 0) t.dead = true;
+      }
+      if (timers.some(t => t.dead)) timers = timers.filter(t => !t.dead);
+      if (changed) {
+        render();
+        if (!busy && !queue.length) {
+          updateStatus();
+          if (!taps.length && !timers.length && !physNeeded() && !net.active) stopped = true;
+        }
+      }
+      if (!busy && queue.length) startNext();
+    }
+    if (timers.length && tickHandle === null) schedTick();
+  }
+  function wake() {
+    if (tickHandle === null && !stopped) {
+      lastWall = performance.now();
+      schedTick();
+    }
+  }
+  function onNet(name, args) {
+    args.forEach((a, i) => { vars['net' + (i + 1)] = a; });
+    for (const h of taps) {
+      if (h.net !== name) continue;
+      if (queue.length < MAX_TAP_QUEUE) queue.push(h);
+    }
+    if (!busy && queue.length) startNext();
+  }
+  runCtl = { onTap, onKey, onNet, isBusy: () => busy, refresh: updateStatus, wake };
+
+  step();
+}
+
+canvas.addEventListener('pointerdown', e => {
+  if (!runCtl || stopped) return;
+  initAudio();
+  const r = canvas.getBoundingClientRect();
+  if (!r.width || !r.height) return;
+  e.preventDefault();
+  mouseIsDown = true;
+  setMouse(e, r);
+  try { runCtl.onTap(vars.mouseX, vars.mouseY); } catch (err) { fatal(err); }
+});
+function setMouse(e, r) {
+  r = r || canvas.getBoundingClientRect();
+  if (!r.width || !r.height) return;
+  vars.mouseX = Math.round((e.clientX - r.left) * canvas.width / r.width);
+  vars.mouseY = Math.round((e.clientY - r.top) * canvas.height / r.height);
+}
+canvas.addEventListener('pointermove', e => { if (runCtl && !stopped) setMouse(e); });
+window.addEventListener('pointerup', () => { mouseIsDown = false; });
+window.addEventListener('pointercancel', () => { mouseIsDown = false; });
+
+// ===== КОМАНДЫ =====
+function noArt(name) {
+  if (artDepth) throw new Error(name + ' нельзя использовать внутри /art');
+}
+
+// ===== ЗВУК =====
+let audioCtx = null, lastSound = 0;
+function initAudio() {     // браузер включает звук только после нажатия — вызываем из кнопок
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!audioCtx && AC) audioCtx = new AC();
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  } catch (e) {}
+}
+function tone(f, at, dur, type, f2, vol) {
+  f *= X.pitch; if (f2) f2 *= X.pitch; vol *= X.vol;
+  const t = audioCtx.currentTime + at;
+  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+  o.type = type;
+  o.frequency.setValueAtTime(f, t);
+  if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+  g.gain.setValueAtTime(vol, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g);
+  g.connect(audioCtx.destination);
+  o.start(t);
+  o.stop(t + dur + 0.02);
+}
+const SOUNDS = {
+  beep: () => tone(880, 0, 0.12, 'square', 0, 0.08),
+  click: () => tone(1500, 0, 0.04, 'square', 0, 0.08),
+  pop: () => tone(700, 0, 0.12, 'sine', 200, 0.25),
+  boom: () => tone(150, 0, 0.5, 'sawtooth', 30, 0.3),
+  win: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.1, 0.15, 'triangle', 0, 0.2)),
+  lose: () => [400, 330, 260, 180].forEach((f, i) => tone(f, i * 0.14, 0.2, 'sawtooth', 0, 0.12))
+};
+function playSound(spec) {
+  const usage = '/sound beep | click | pop | boom | win | lose  (или  /sound частота сек)';
+  const t = spec.split(/\s+/).filter(Boolean);
+  let fn = null;
+  if (t.length === 1 && Object.prototype.hasOwnProperty.call(SOUNDS, t[0].toLowerCase())) {
+    fn = SOUNDS[t[0].toLowerCase()];
+  } else if (t.length === 2) {
+    const f = num(t[0]), d = num(t[1]);
+    if (isFinite(f) && isFinite(d) && f >= 20 && f <= 20000 && d > 0 && d <= 5) {
+      fn = () => tone(f, 0, d, 'sine', 0, 0.2);
+    }
+  }
+  if (!fn) throw new Error(usage);
+  initAudio();
+  if (!audioCtx) return;                                  // звука нет — молча
+  const now = performance.now();
+  if (now - lastSound < 20) return;                       // не заваливаем звуками в цикле
+  lastSound = now;
+  try { fn(); } catch (e) {}
+}
+
+// ===== ТАЙМЕРЫ =====
+// /timer имя сек [раз]  ... /end — выполнить блок через сек секунд.
+// «раз»: сколько раз повторить (по умолчанию 1), inf — без конца.
+function startTimer(node) {
+  noArt('/timer');
+  const usage = '/timer имя сек [раз]  (например: /timer tick 2 5  или  /timer tick 1 inf)';
+  const t = subst(node.arg).trim().split(/\s+/);
+  if (t.length < 2 || t.length > 3) throw new Error(usage);
+  const name = t[0];
+  if (!/^[^\s.]+$/.test(name)) throw new Error('/timer: имя без пробелов и точек');
+  const sec = num(t[1]);
+  if (!isFinite(sec) || sec <= 0 || sec > 86400) throw new Error('/timer: секунды — число больше 0');
+  let times = 1;
+  if (t.length === 3) {
+    if (/^(inf|forever|всегда|∞)$/i.test(t[2])) times = Infinity;
+    else {
+      times = Math.floor(num(t[2]));
+      if (!isFinite(times) || times < 1) throw new Error('/timer: «раз» — целое число от 1 (или inf — без конца)');
+    }
+  }
+  cancelTimer(name);      // таймер с таким именем запускается заново
+  if (timers.length >= MAX_TIMERS) throw new Error('Слишком много таймеров (больше ' + MAX_TIMERS + ')');
+  timers.push({
+    isTimer: true, name, def: node, line: node.line,
+    every: sec * 1000, due: vclock + sec * 1000,
+    left: times, pending: false, dead: false
+  });
+  everTimers.add(name);
+  if (runCtl) runCtl.wake();
+}
+// /timer delete имя сек — удалить объект через сек секунд (конкретный объект, найденный сейчас)
+function startDeleteTimer(c) {
+  noArt('/timer delete');
+  const usage = '/timer delete имя сек  (например: /timer delete bullet 2)';
+  const name = subst(c.del).trim();
+  const sec = numArg(subst(c.secArg));
+  if (!isFinite(sec) || sec <= 0 || sec > 86400) throw new Error(usage);
+  const o = byName(name);
+  if (!o) throw new Error('/timer delete: "' + name + '" не найден');
+  if (timers.length >= MAX_TIMERS) throw new Error('Слишком много таймеров (больше ' + MAX_TIMERS + ')');
+  const tname = 'delete:' + name;
+  timers.push({
+    isTimer: true, name: tname, delObj: o, line: c.line,
+    every: sec * 1000, due: vclock + sec * 1000, left: 1, pending: false, dead: false
+  });
+  everTimers.add(tname);
+  if (runCtl) runCtl.wake();
+}
+function cancelTimer(name) {
+  let found = false;
+  for (const t of timers) if (t.name === name) { t.dead = true; found = true; }
+  if (found) timers = timers.filter(t => !t.dead);
+  queue = queue.filter(x => !(x.isTimer && x.name === name));
+  return found;
+}
+function cancelAllTimers() {
+  for (const t of timers) t.dead = true;
+  timers = [];
+  queue = [];
+}
+
+// поставить копию рисунка из /art
+function stamp(name, x, y) {
+  const d = defs.art[name];
+  if (!d) throw new Error('/use: рисунок "' + name + '" не найден (создай его через /art)');
+  if (artDepth >= MAX_DEPTH) throw new Error('/use: слишком глубоко (рисунок использует сам себя?)');
+
+  const savedColor = currentColor, savedSpeed = speed, savedLW = curLW;
+  const savedBase = groupBase, savedScope = scopeStart, start = objects.length;
+  artDepth++;
+  groupBase = groupStack.length;
+  scopeStart = start;
+  try {
+    pump([{ cmds: flatOf(d), i: 0 }], true, Infinity);
+  } finally {
+    artDepth--;
+    while (groupStack.length > groupBase) addErr(groupStack.pop().line, '/group без //s');
+    groupBase = savedBase;
+    scopeStart = savedScope;
+    currentColor = savedColor;
+    speed = savedSpeed;
+    curLW = savedLW;
+  }
+
+  const all = objects.splice(start);
+  const part = all.filter(o => !o.deleted);
+  deadCount = Math.max(0, deadCount - (all.length - part.length));
+  if (!part.length) throw new Error('/use: в рисунке "' + name + '" нет объектов');
+  const g = { id: nextId++, type: 'group', children: part, name: null };
+  const b = bbox(g);
+  shift(g, x - b.x1, y - b.y1);
+  addObj(g);      // раньше мимо лимита MAX_OBJECTS
+}
+
+// /var имя значение   и   /add имя число
+function varCmd(c) {
+  const m = c.arg.match(/^(\S+)\s+([\s\S]+)$/);
+  if (c.w === '/var') {
+    const usage = '/var имя значение  (например: /var score 0  или  /var x $x + 10)';
+    if (!m || !VAR_NAME.test(m[1])) throw new Error(usage);
+    const raw = m[2].trim();
+    let v;
+    const q = raw.match(/^["“”«»]([\s\S]*)["“”«»]$/);
+    if (q) {
+      v = subst(q[1]);
+    } else {
+      try { v = calc(raw); }
+      catch (e) {
+        if (e instanceof NotMath) v = subst(raw);   // не число — значит слово или цвет
+        else throw e;
+      }
+    }
+    vars[m[1]] = v;
+    return;
+  }
+  const usage = '/add имя число  (например: /add score 1)';
+  if (!m) throw new Error(usage);
+  const cur = vars[m[1]];
+  if (cur === undefined) {
+    throw new Error('/add: переменная "' + m[1] + '" не создана — сначала /var ' + m[1] + ' 0');
+  }
+  if (typeof cur !== 'number') throw new Error('/add: переменная "' + m[1] + '" не число');
+  const d = numArg(subst(m[2]));
+  if (!isFinite(d)) throw new Error(usage);
+  vars[m[1]] = cur + d;
+}
+
+// ===== v8: ПОМОЩНИКИ =====
+const EASE = Object.assign(Object.create(null), {
+  linear: p => p,
+  in: p => p * p,
+  out: p => 1 - (1 - p) * (1 - p),
+  inout: p => p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2,
+  bounce: p => {
+    const n = 7.5625, d = 2.75;
+    if (p < 1 / d) return n * p * p;
+    if (p < 2 / d) return n * (p -= 1.5 / d) * p + 0.75;
+    if (p < 2.5 / d) return n * (p -= 2.25 / d) * p + 0.9375;
+    return n * (p -= 2.625 / d) * p + 0.984375;
+  }
+});
+// «[имя] аргументы»: если первое слово не число — это имя объекта, иначе берём последний объект
+function objAndArgs(t, cmd) {
+  if (t.length && !isFinite(num(t[0]))) return [need(t[0], cmd), t.slice(1)];
+  const o = last();
+  if (!o) throw new Error(cmd + ' — нет объекта');
+  return [o, t];
+}
+function need(name, cmd) {
+  const o = byName(name);
+  if (!o) throw new Error(cmd + ': "' + name + '" не найден');
+  return o;
+}
+// «[имя] число»: с одним словом берём последний объект (если useLast)
+function objNum(rest, usage, useLast) {
+  const t = rest.trim().split(/\s+/).filter(Boolean);
+  let o, v;
+  if (t.length === 1 && useLast) {
+    o = last(); v = num(t[0]);
+    if (!o) throw new Error(usage + ' — нет объекта');
+  } else if (t.length === 2) {
+    o = need(t[0], usage.split(' ')[0]); v = num(t[1]);
+  } else throw new Error(usage);
+  if (!isFinite(v)) throw new Error(usage);
+  return [o, v];
+}
+function randColor() {
+  const h = Math.random() * 360, s = 0.8, l = 0.58;
+  const f = n => {
+    const k = (n + h / 30) % 12, a = s * Math.min(l, 1 - l);
+    return Math.round((l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1))) * 255).toString(16).padStart(2, '0');
+  };
+  return '#' + f(0) + f(8) + f(4);
+}
+function parseItem(tok) { const n = num(tok); return isFinite(n) ? n : tok; }
+function listOf(name, cmd) {
+  const L = lists[name];
+  if (!L) throw new Error(cmd + ': список "' + name + '" не создан — сначала /list ' + name + ' ...');
+  return L;
+}
+function cloneObj(o) {
+  const c = JSON.parse(JSON.stringify(o));
+  (function re(n) {
+    n.id = nextId++; delete n.deleted;
+    if (n.type === 'group') n.children.forEach(ch => { re(ch); ch.name = null; });
+  })(c);
+  c.name = null;
+  return c;
+}
+function copyStyle(a, b) {
+  const s = firstLeaf(a);
+  leaves(b, n => {
+    n.color = s.color;
+    for (const k of ['alpha', 'shadow', 'grad', 'sw', 'sc', 'glow']) {
+      if (s[k] === undefined) delete n[k]; else n[k] = JSON.parse(JSON.stringify(s[k]));
+    }
+    if (n.type === s.type) {
+      if (n.type === 'circle') { n.r = s.r; if (s.n) { n.n = s.n; n.inner = s.inner; } else { delete n.n; delete n.inner; } }
+      else if (n.type === 'rect') { n.w = s.w; n.h = s.h; n.rad = s.rad; }
+      else if (n.type === 'text') n.fontSize = s.fontSize;
+      else if (n.type === 'line') n.lw = s.lw;
+    }
+  });
+}
+// ----- границы и движение -----
+function clampObj(o) {
+  const b = bbox(o);
+  let dx = 0, dy = 0, hx = 0, hy = 0;
+  if (b.x1 < 0) { dx = -b.x1; hx = -1; } else if (b.x2 > canvasW) { dx = canvasW - b.x2; hx = 1; }
+  if (b.y1 < 0) { dy = -b.y1; hy = -1; } else if (b.y2 > canvasH) { dy = canvasH - b.y2; hy = 1; }
+  if (dx || dy) shift(o, dx, dy);
+  return { x: hx, y: hy };
+}
+function moveObj(o, dx, dy) {
+  shift(o, dx, dy);
+  if (o.border) clampObj(o);
+}
+// ----- физика: свой ритм, не мешает программе -----
+function physNeeded() {
+  if (X.active) return true;
+  if (touchSounds.length) return true;
+  for (const o of objects) if (!o.deleted && (o.phys || o.follow || o.fps)) return true;
+  return false;
+}
+function wakePhys() {
+  if (physHandle === null && !stopped) { physLast = performance.now(); physHandle = setTimeout(physTick, PHYS_MS); }
+}
+function physStep(dt) {
+  let moved = false, grid = null;
+  if (X.active) xStep(dt);
+  for (const o of objects) {
+    if (o.deleted) continue;
+    if (o.fps) moved = true;
+    if (o.follow) {
+      const t = byName(o.follow.t);
+      if (t && t !== o) {
+        const b = bbox(o), tb = bbox(t), f = 1 - Math.exp(-o.follow.k * dt);
+        const dx = ((tb.x1 + tb.x2) - (b.x1 + b.x2)) / 2 * f, dy = ((tb.y1 + tb.y2) - (b.y1 + b.y2)) / 2 * f;
+        if (Math.abs(dx) > 0.01 || Math.abs(dy) > 0.01) { moveObj(o, dx, dy); moved = true; }
+      }
+    }
+    if (o.phys) {
+      o.vx = o.vx || 0;
+      o.vy = (o.vy || 0) + (o.ng ? 0 : gravity * 1000 * dt);
+      if (o.col && !o.plat) {
+        if (o.vx || o.vy) { if (!grid) grid = buildGrid(dt); moveBody(o, dt, grid); moved = true; }
+      } else {
+        const dx = o.vx * dt, dy = o.vy * dt;
+        if (dx || dy) { shift(o, dx, dy); moved = true; }
+      }
+      if (o.border || o.bounce != null) {
+        const h = clampObj(o), e = o.bounce != null ? o.bounce : 0;
+        if (h.x && (h.x < 0 ? o.vx < 0 : o.vx > 0)) o.vx = -o.vx * e;
+        if (h.y && (h.y < 0 ? o.vy < 0 : o.vy > 0)) { o.vy = -o.vy * e; if (Math.abs(o.vy) < 20) o.vy = 0; }
+      }
+    }
+  }
+  return moved || X.active;
+}
+function touchCheck() {
+  for (const s of touchSounds) {
+    const a = byName(s.a), b = byName(s.b);
+    const now = !!(a && b && touching(a, b));
+    if (now && !s.was) { try { playSound(s.s); } catch (e) {} }
+    s.was = now;
+  }
+}
+function physTick() {
+  physHandle = null;
+  if (stopped) return;
+  const now = performance.now();
+  const dt = Math.min(0.05, (now - physLast) / 1000) * X.ts;
+  physLast = now;
+  if (!paused) {
+    try { if (physStep(dt)) render(); touchCheck(); }
+    catch (e) { fatal(e); return; }
+  }
+  if (physNeeded()) physHandle = setTimeout(physTick, PHYS_MS);
+}
+// ===== v18: ФИЗИКА СТОЛКНОВЕНИЙ (непрерывная, без «туннелирования») =====
+// /collide имя — тело: двигается по скорости/гравитации и сталкивается с /solid и другими телами.
+// Для каждого шага ищем ближайшее время удара (swept-тест: коробка, круг, коробка↔круг),
+// двигаем тело ровно до удара, считаем импульс (масса, упругость, трение) и доезжаем остаток времени.
+// Поэтому даже очень быстрый объект не пролетает сквозь тонкую стенку.
+const COL_SKIN = 0.01;        // зазор после удара, чтобы тело не «залипало»
+const COL_REST_V = 60;        // медленнее этого (пикс/с) отскока нет — тело просто лежит
+function colShape(o) {
+  if (o.type === 'circle') return { c: 1, x: o.x, y: o.y, r: o.r };
+  const b = bbox(o);
+  return { c: 0, x1: b.x1, y1: b.y1, x2: b.x2, y2: b.y2 };
+}
+// движущаяся коробка a (смещение dx,dy) против неподвижной коробки b.
+// Результат: { t 0..1, nx, ny (нормаль, куда выталкивать a), pen? } или null
+function sweepBoxBox(a, dx, dy, b) {
+  const ovX = a.x2 > b.x1 && a.x1 < b.x2, ovY = a.y2 > b.y1 && a.y1 < b.y2;
+  let txE, txX, tyE, tyX;
+  if (dx > 0) { txE = (b.x1 - a.x2) / dx; txX = (b.x2 - a.x1) / dx; }
+  else if (dx < 0) { txE = (b.x2 - a.x1) / dx; txX = (b.x1 - a.x2) / dx; }
+  else { txE = ovX ? -Infinity : Infinity; txX = Infinity; }
+  if (dy > 0) { tyE = (b.y1 - a.y2) / dy; tyX = (b.y2 - a.y1) / dy; }
+  else if (dy < 0) { tyE = (b.y2 - a.y1) / dy; tyX = (b.y1 - a.y2) / dy; }
+  else { tyE = ovY ? -Infinity : Infinity; tyX = Infinity; }
+  const tE = Math.max(txE, tyE), tX = Math.min(txX, tyX);
+  if (tE > tX || tE > 1 || tX <= 0) return null;
+  if (tE < -1e-9 && ovX && ovY) {                       // уже вдавлен: выталкиваем по самой короткой оси
+    const px = Math.min(a.x2 - b.x1, b.x2 - a.x1), py = Math.min(a.y2 - b.y1, b.y2 - a.y1);
+    let nx = 0, ny = 0, pen;
+    if (px < py) { nx = (a.x1 + a.x2) < (b.x1 + b.x2) ? -1 : 1; pen = px; }
+    else { ny = (a.y1 + a.y2) < (b.y1 + b.y2) ? -1 : 1; pen = py; }
+    return dx * nx + dy * ny < 0 ? { t: 0, nx, ny, pen } : null;   // если уже уезжает — не мешаем
+  }
+  const t = Math.max(0, tE);
+  return txE > tyE ? { t, nx: dx > 0 ? -1 : 1, ny: 0 } : { t, nx: 0, ny: dy > 0 ? -1 : 1 };
+}
+// луч (центр движущегося круга) против круга радиуса R с центром (bx,by)
+function sweepRay(ax, ay, dx, dy, bx, by, R) {
+  const fx = ax - bx, fy = ay - by, c = fx * fx + fy * fy - R * R;
+  if (c < 0) {
+    const d = Math.sqrt(fx * fx + fy * fy);
+    const nx = d > 1e-9 ? fx / d : 0, ny = d > 1e-9 ? fy / d : -1;
+    return dx * nx + dy * ny < 0 ? { t: 0, nx, ny, pen: R - d } : null;
+  }
+  const a = dx * dx + dy * dy;
+  if (a < 1e-12) return null;
+  const bq = fx * dx + fy * dy;
+  if (bq >= 0) return null;                              // удаляемся
+  const disc = bq * bq - a * c;
+  if (disc < 0) return null;
+  const t = (-bq - Math.sqrt(disc)) / a;
+  if (t < 0 || t > 1) return null;
+  const hx = fx + dx * t, hy = fy + dy * t, d = Math.hypot(hx, hy) || 1;
+  return { t, nx: hx / d, ny: hy / d };
+}
+// круг c против коробки b: коробка «раздутая» на r по крестовине + четыре круглых угла
+function sweepCircleBox(c, dx, dy, b) {
+  const r = c.r, p = { x1: c.x, y1: c.y, x2: c.x, y2: c.y };
+  let best = null;
+  const take = h => { if (h && (!best || h.t < best.t)) best = h; };
+  take(sweepBoxBox(p, dx, dy, { x1: b.x1 - r, y1: b.y1, x2: b.x2 + r, y2: b.y2 }));
+  take(sweepBoxBox(p, dx, dy, { x1: b.x1, y1: b.y1 - r, x2: b.x2, y2: b.y2 + r }));
+  take(sweepRay(c.x, c.y, dx, dy, b.x1, b.y1, r));
+  take(sweepRay(c.x, c.y, dx, dy, b.x2, b.y1, r));
+  take(sweepRay(c.x, c.y, dx, dy, b.x1, b.y2, r));
+  take(sweepRay(c.x, c.y, dx, dy, b.x2, b.y2, r));
+  return best;
+}
+function sweepPair(a, dx, dy, b) {
+  if (!a.c && !b.c) return sweepBoxBox(a, dx, dy, b);
+  if (a.c && b.c) return sweepRay(a.x, a.y, dx, dy, b.x, b.y, a.r + b.r);
+  if (a.c) return sweepCircleBox(a, dx, dy, b);
+  const h = sweepCircleBox(b, -dx, -dy, a);              // a — коробка, b — круг: двигаем круг навстречу
+  return h && { t: h.t, nx: -h.nx, ny: -h.ny, pen: h.pen };
+}
+// ----- сетка: чтобы не сравнивать каждый объект с каждым -----
+function buildGrid(dt) {
+  const CELL = 64, cells = new Map(), big = [], all = [];
+  for (const o of objects) {
+    if (o.deleted || !(o.solid || o.col)) continue;
+    all.push(o);
+    const b = bbox(o);
+    let x1 = b.x1, y1 = b.y1, x2 = b.x2, y2 = b.y2;
+    if (o.col && o.phys) {                               // тело за шаг уедет — занимаем и путь
+      const mx = (o.vx || 0) * dt, my = (o.vy || 0) * dt;
+      x1 += Math.min(0, mx); x2 += Math.max(0, mx); y1 += Math.min(0, my); y2 += Math.max(0, my);
+    }
+    const cx1 = Math.floor(x1 / CELL), cx2 = Math.floor(x2 / CELL), cy1 = Math.floor(y1 / CELL), cy2 = Math.floor(y2 / CELL);
+    if (!((cx2 - cx1 + 1) * (cy2 - cy1 + 1) <= 64)) { big.push(o); continue; }   // огромные и «битые» (NaN) — в общий список
+    for (let cx = cx1; cx <= cx2; cx++) for (let cy = cy1; cy <= cy2; cy++) {
+      const k = cx * 131071 + cy;
+      const l = cells.get(k);
+      if (l) l.push(o); else cells.set(k, [o]);
+    }
+  }
+  return { CELL, cells, big, all };
+}
+function gridQuery(g, x1, y1, x2, y2) {
+  const C = g.CELL, cx1 = Math.floor(x1 / C), cx2 = Math.floor(x2 / C), cy1 = Math.floor(y1 / C), cy2 = Math.floor(y2 / C);
+  if (!((cx2 - cx1 + 1) * (cy2 - cy1 + 1) <= 4096)) return g.all;      // слишком большая область — просто все
+  const out = new Set(g.big);
+  for (let cx = cx1; cx <= cx2; cx++) for (let cy = cy1; cy <= cy2; cy++) {
+    const l = g.cells.get(cx * 131071 + cy);
+    if (l) for (const o of l) out.add(o);
+  }
+  return out;
+}
+const isBody = o => !!(o.col && o.phys);
+function fricOf(o) { return o.fric != null ? o.fric : 0.3; }
+// удар a о b (b — неподвижная стена или другое тело). n — нормаль, куда выталкивать a
+function collideResp(a, b, nx, ny) {
+  const ia = 1 / (a.mass || 1), ib = isBody(b) ? 1 / (b.mass || 1) : 0, isum = ia + ib;
+  const bvx = ib ? (b.vx || 0) : 0, bvy = ib ? (b.vy || 0) : 0;
+  const rvx = (a.vx || 0) - bvx, rvy = (a.vy || 0) - bvy, vn = rvx * nx + rvy * ny;
+  if (ny < -0.5) a.ground = true;
+  if (ib && ny > 0.5) b.ground = true;
+  if (vn >= 0) return;                                   // уже расходятся
+  let e = Math.max(a.bounce || 0, b.bounce || 0);
+  if (-vn < COL_REST_V) e = 0;
+  const j = -(1 + e) * vn / isum;
+  a.vx = (a.vx || 0) + j * ia * nx; a.vy = (a.vy || 0) + j * ia * ny;
+  if (ib) { b.vx = (b.vx || 0) - j * ib * nx; b.vy = (b.vy || 0) - j * ib * ny; }
+  const tx = -ny, ty = nx, vt = rvx * tx + rvy * ty;     // трение: гасим скорость вдоль поверхности, не больше μ·j
+  const mu = Math.sqrt(fricOf(a) * fricOf(b));
+  const jt = Math.max(-mu * j, Math.min(mu * j, -vt / isum));
+  a.vx += jt * ia * tx; a.vy += jt * ia * ty;
+  if (ib) { b.vx -= jt * ib * tx; b.vy -= jt * ib * ty; }
+}
+function moveBody(o, dt, grid) {
+  o.ground = false;
+  let tr = dt;                                           // оставшееся время шага
+  for (let it = 0; it < 4 && tr > 1e-6; it++) {
+    const dx = (o.vx || 0) * tr, dy = (o.vy || 0) * tr;
+    if (!dx && !dy) break;
+    const sa = colShape(o);
+    const x1 = (sa.c ? sa.x - sa.r : sa.x1), x2 = (sa.c ? sa.x + sa.r : sa.x2), y1 = (sa.c ? sa.y - sa.r : sa.y1), y2 = (sa.c ? sa.y + sa.r : sa.y2);
+    let best = null, hit = null;
+    for (const s of gridQuery(grid, x1 + Math.min(0, dx), y1 + Math.min(0, dy), x2 + Math.max(0, dx), y2 + Math.max(0, dy))) {
+      if (s === o || s.deleted) continue;
+      const h = sweepPair(sa, dx, dy, colShape(s));
+      if (h && (!best || h.t < best.t)) { best = h; hit = s; }
+    }
+    if (!best) { shift(o, dx, dy); return; }
+    shift(o, dx * best.t + best.nx * (COL_SKIN + (best.pen || 0)), dy * best.t + best.ny * (COL_SKIN + (best.pen || 0)));
+    collideResp(o, hit, best.nx, best.ny);
+    tr *= 1 - best.t;
+  }
+}
+// ----- /wait: продолжить блок позже, не останавливая остальное -----
+function waitTimer(cont, sec, line) {
+  if (timers.length >= MAX_TIMERS) throw new Error('Слишком много таймеров (больше ' + MAX_TIMERS + ')');
+  timers.push({
+    isTimer: true, name: 'wait', cont, line,
+    every: sec * 1000, due: vclock + sec * 1000, left: 1, pending: false, dead: false
+  });
+  if (runCtl) runCtl.wake();
+}
+function stateKey(rest) {
+  const slot = rest.trim() || 'main';
+  if (/\s/.test(slot)) throw new Error('Имя сохранения — одно слово');
+  return 'rabbit_state_' + slot;
+}
+
+// ===== v10: ИДЕИ ИЗ СПИСКА (графика, механика, ИИ, звук, мир, интерфейс, эксперименты) =====
+function xInit() {
+  return { t: 0, shake: 0, shkL: 0, shk0: 1, flashA: 0, flashC: '#ffffff', vig: 0, inv: false, mir: false, kal: false,
+    glitch: 0, pix: 0, blur: 0, zoom: 1, rotcam: 0, camT: null, parts: [], trails: [], bg: 0, par: false, bgx: 0,
+    weather: null, wp: [], dnT: 0, ts: 1, hud: false, ds: 0, msgs: [], snaps: [], snapT: 0, snapOn: false,
+    wells: [], player: null, cp: null, pp: null, combo: 0, comboT: 0, pcool: 0, hcool: 0, active: false,
+    musicH: null, vol: 1, pitch: 1, pw: {} };
+}
+let X = xInit();
+function xReset() { stopMusic(); X = xInit(); X.snapOn = /^\s*\/rewind\b/im.test(editor.value); if (X.snapOn) X.active = true; }
+const rnd = (a, b) => a + Math.random() * (b - a);
+const ctr = o => { const b = bbox(o); return { x: (b.x1 + b.x2) / 2, y: (b.y1 + b.y2) / 2 }; };
+const TUNES = { happy: [523, 659, 784, 659, 523, 659, 784, 1047], sad: [440, 392, 349, 330, 349, 330, 294, 262], battle: [220, 220, 330, 220, 262, 220, 247, 196] };
+function stopMusic() { if (X.musicH) { clearInterval(X.musicH); X.musicH = null; } }
+Object.assign(SOUNDS, {
+  step: () => tone(200, 0, 0.05, 'square', 0, 0.08),
+  hit: () => tone(300, 0, 0.15, 'sawtooth', 80, 0.2),
+  coin: () => { tone(988, 0, 0.07, 'square', 0, 0.1); tone(1319, 0.07, 0.12, 'square', 0, 0.1); },
+  jump: () => tone(300, 0, 0.2, 'square', 700, 0.12),
+  gameover: () => [392, 330, 262, 196, 130].forEach((f, i) => tone(f, i * 0.22, 0.3, 'triangle', 0, 0.2))
+});
+function playX(n) { try { playSound(n); } catch (e) {} }
+function xMsg(text, k, sec) { X.msgs.push({ t: String(text), k, l: sec || 3, l0: sec || 3 }); }
+function spark(p, col, n) { for (let i = 0; i < n; i++) { const a = rnd(0, TAU), s = rnd(60, 260); X.parts.push({ x: p.x, y: p.y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 60, l: rnd(0.4, 0.9), c: col }); } }
+function waveText(o, w) {
+  let x = -w / 2;
+  for (const ch of o.text) { ctx.fillText(ch, x, -o.fontSize / 2 + Math.sin(X.t * 5 + x * 0.05) * o.wave); x += ctx.measureText(ch).width; }
+}
+function xHurt(pl) {
+  if (X.hcool > 0 || vars.gameover == 1 || vars.shield == 1 || vars.invis == 1) return;
+  X.hcool = 1;
+  const lv = Math.max(0, (vars.lives === undefined ? 3 : vars.lives) - 1);
+  vars.lives = lv; playX('hit'); X.shake = 10; X.shkL = X.shk0 = 0.3; X.flashA = 0.6; X.flashC = '#ff0000';
+  if (lv <= 0) { vars.gameover = 1; playX('gameover'); xMsg('GAME OVER', 'ach', 5); }
+  if (X.cp) { const c = ctr(pl); shift(pl, X.cp.x - c.x, X.cp.y - c.y); if (pl.phys) { pl.vx = 0; pl.vy = 0; } }
+}
+function xStep(dt) {
+  const w = canvasW, h = canvasH;
+  X.t += dt; X.bgx += X.bg * dt;
+  if (X.shkL > 0 && (X.shkL -= dt) <= 0) X.shake = 0;
+  if (X.flashA > 0) X.flashA = Math.max(0, X.flashA - dt * 2);
+  if (X.glitch > 0) X.glitch -= dt;
+  if (X.hcool > 0) X.hcool -= dt;
+  if (X.pcool > 0) X.pcool -= dt;
+  for (const p of X.parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 300 * dt; p.l -= dt; }
+  X.parts = X.parts.filter(p => p.l > 0);
+  for (const m of X.msgs) m.l -= dt;
+  X.msgs = X.msgs.filter(m => m.l > 0);
+  if (X.comboT > 0 && (X.comboT -= dt) <= 0) X.combo = 0;
+  for (const k in X.pw) if ((X.pw[k] -= dt) <= 0) { delete X.pw[k]; vars[k] = 0; }
+  if (X.weather) {
+    const rain = X.weather === 'rain';
+    for (let i = 0; i < (rain ? 6 : 2); i++) X.wp.push({ x: rnd(0, w), y: -5, v: rain ? rnd(500, 800) : rnd(40, 100), d: rnd(-20, 20) });
+    for (const p of X.wp) { p.y += p.v * dt; p.x += p.d * dt; }
+    X.wp = X.wp.filter(p => p.y < h).slice(-900);
+  }
+  for (const t of X.trails) {
+    const o = byName(t.n);
+    if (o) { const b = bbox(o), c = ctr(o); t.pts.push({ x: c.x, y: c.y, w: b.x2 - b.x1, h: b.y2 - b.y1, c: getColor(o) }); if (t.pts.length > 12) t.pts.shift(); }
+  }
+  if (X.snapOn && (X.snapT += dt) >= 0.1) {
+    X.snapT = 0;
+    if (objects.length < 400) { X.snaps.push(JSON.stringify(objects.filter(o => !o.deleted))); if (X.snaps.length > 100) X.snaps.shift(); }
+  }
+  const pl = X.player ? byName(X.player) : null;
+  for (const o of objects) {
+    if (o.deleted) continue;
+    if (o.patrol) { const p = o.patrol, c = ctr(o); if (c.x < p.x1) p.d = 1; else if (c.x > p.x2) p.d = -1; shift(o, p.d * p.s * dt, 0); }
+    const tg = o.aggro ? byName(o.aggro.t) : o.flee ? byName(o.flee.t) : null;
+    if (tg && tg !== o) {
+      const a = ctr(o), b = ctr(tg), dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1;
+      if (o.aggro && d < o.aggro.d) { const s = o.aggro.s * dt; shift(o, dx / d * s, dy / d * s); }
+      if (o.flee && d < 250) { const s = o.flee.s * dt; shift(o, -dx / d * s, -dy / d * s); if (o.border) clampObj(o); }
+    }
+    if (o.plat) {
+      const b = bbox(o); o.ground = !!(o.border && b.y2 >= h - 1);
+      if ((o.vy || 0) >= 0) for (const s of objects) {
+        if (!s.solid || s.deleted || s === o) continue;
+        const q = bbox(s), pb = b.y2 - (o.vy || 0) * dt;
+        if (b.x2 > q.x1 && b.x1 < q.x2 && b.y2 >= q.y1 && pb <= q.y1 + 4) { shift(o, 0, q.y1 - b.y2); o.vy = 0; o.ground = true; break; }
+      }
+      if (o.spin) {
+        if (!o.ground) o.vis = (o.vis || 0) + o.spin * dt;
+        else { const q = Math.PI / 2, tg = Math.round((o.vis || 0) / q) * q; o.vis = (o.vis || 0) + (tg - (o.vis || 0)) * Math.min(1, dt * 18); }
+      }
+    }
+    if (o.tbar) { const T = o.tbar; T.l -= dt; o.w = T.w * Math.max(0, T.l / T.t); if (T.l <= 0 && !T.done) { T.done = 1; vars.timeup = 1; playX('lose'); } }
+    if (o.life !== undefined && (o.life -= dt) <= 0) markDead(o);
+    if (o.bullet) { const c = ctr(o); if (c.x < -50 || c.y < -50 || c.x > w + 50 || c.y > h + 50) markDead(o); }
+    if (o.pdraw) {
+      const c = ctr(o);
+      if (!o.pdl) o.pdl = c;
+      else if (Math.hypot(c.x - o.pdl.x, c.y - o.pdl.y) > 4) {
+        if (objects.length < MAX_OBJECTS - 1) objects.push({ id: nextId++, type: 'line', x1: o.pdl.x, y1: o.pdl.y, x2: c.x, y2: c.y, color: getColor(o), lw: curLW, name: null });
+        o.pdl = c;
+      }
+    }
+    if (o.phys) for (const g of X.wells) {
+      const c = ctr(o), dx = g.x - c.x, dy = g.y - c.y, d = Math.max(30, Math.hypot(dx, dy)), a = g.k * 60000 / (d * d);
+      o.vx = (o.vx || 0) + dx / d * a * dt; o.vy = (o.vy || 0) + dy / d * a * dt;
+      if (g.hole && Math.hypot(dx, dy) < g.r * 0.35) markDead(o);
+    }
+    if (pl && o !== pl) {
+      if (o.coin && touching(pl, o)) { markDead(o); vars.score = (+vars.score || 0) + 1 + X.combo; playX('coin'); spark(ctr(o), '#ffd700', 8); }
+      else if (o.key && touching(pl, o)) { markDead(o); vars.haskey = 1; playX('coin'); xMsg('Ключ найден!', 'ach', 2); }
+      else if (o.pu && touching(pl, o)) { X.pw[o.pu] = 5; vars[o.pu] = 1; markDead(o); playX('win'); xMsg('Бонус: ' + o.pu, 'ach', 2); }
+      else if (o.portal && X.pcool <= 0 && touching(pl, o)) {
+        const t = byName(o.portal);
+        if (t) { const c = ctr(t), b = ctr(pl); shift(pl, c.x - b.x, c.y - b.y); X.pcool = 1; }
+      }
+      else if (o.door && touching(pl, o)) {
+        if (vars.haskey == 1) { markDead(o); xMsg('Дверь открыта', 'ach', 2); }
+        else if (X.pp) { const b = ctr(pl); shift(pl, X.pp.x - b.x, X.pp.y - b.y); }
+      }
+      else if (o.hurt && touching(pl, o)) xHurt(pl);
+    }
+  }
+  if (pl) X.pp = ctr(pl);
+}
+function xBack() {
+  if (X.bg || X.par) {
+    const sp = 70, off = ((X.bgx % sp) + sp) % sp;
+    ctx.fillStyle = 'rgba(255,255,255,0.07)';
+    for (let x = -sp + off; x < canvasW; x += sp) ctx.fillRect(x, 0, sp / 2, canvasH);
+    if (X.par) {
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      for (let i = 0; i < 30; i++) {
+        const x = (((i * 131.7 - X.bgx * (0.2 + (i % 3) * 0.2)) % canvasW) + canvasW) % canvasW;
+        ctx.fillRect(x, (i * 57.3) % canvasH, 1 + (i % 3), 1 + (i % 3));
+      }
+    }
+  }
+}
+function xCam() {
+  let cx = canvasW / 2, cy = canvasH / 2;
+  if (X.camT) { const o = byName(X.camT); if (o) { const c = ctr(o); cx = c.x; cy = c.y; } }
+  ctx.translate(canvasW / 2, canvasH / 2);
+  if (X.rotcam) ctx.rotate(X.rotcam * DEG);
+  if (X.zoom !== 1) ctx.scale(X.zoom, X.zoom);
+  if (X.shake > 0) ctx.translate(rnd(-1, 1) * X.shake * (X.shkL / X.shk0), rnd(-1, 1) * X.shake * (X.shkL / X.shk0));
+  ctx.translate(-cx, -cy);
+  for (const t of X.trails) {
+    t.pts.forEach((p, i) => { ctx.globalAlpha = 0.5 * (i + 1) / t.pts.length * 0.6; ctx.fillStyle = p.c; ctx.fillRect(p.x - p.w / 2, p.y - p.h / 2, p.w, p.h); });
+    ctx.globalAlpha = 1;
+  }
+}
+function xFront() {
+  for (const o of objects) {
+    if (o.deleted || !o.hpbar || o.hp === undefined) continue;
+    const b = bbox(o), max = o.hpMax || o.hp || 1, bw = Math.max(20, b.x2 - b.x1);
+    ctx.fillStyle = '#400'; ctx.fillRect(b.x1, b.y1 - 10, bw, 5);
+    ctx.fillStyle = '#3d3'; ctx.fillRect(b.x1, b.y1 - 10, bw * Math.max(0, o.hp) / max, 5);
+  }
+  for (const g of X.wells) {
+    ctx.beginPath(); ctx.arc(g.x, g.y, g.hole ? g.r * 0.35 : 12, 0, TAU);
+    ctx.fillStyle = g.hole ? '#000' : 'rgba(150,100,255,0.4)'; ctx.fill();
+    ctx.strokeStyle = '#a6f'; ctx.lineWidth = 2; ctx.stroke();
+  }
+  for (const p of X.parts) { ctx.globalAlpha = Math.min(1, p.l * 2); ctx.fillStyle = p.c; ctx.fillRect(p.x - 2, p.y - 2, 4, 4); }
+  ctx.globalAlpha = 1;
+}
+function xPost() {
+  const w = canvasW, h = canvasH;
+  if (X.weather) {
+    ctx.strokeStyle = ctx.fillStyle = 'rgba(200,220,255,0.8)'; ctx.lineWidth = 1;
+    for (const p of X.wp) { if (X.weather === 'rain') { ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + p.d * 0.03, p.y + 10); ctx.stroke(); } else ctx.fillRect(p.x, p.y, 3, 3); }
+  }
+  if (X.blur > 0) { ctx.filter = 'blur(' + X.blur + 'px)'; ctx.drawImage(canvas, 0, 0); ctx.filter = 'none'; }
+  if (X.pix > 1) {
+    const t = document.createElement('canvas'), tw = Math.max(1, Math.ceil(w / X.pix)), th = Math.max(1, Math.ceil(h / X.pix));
+    t.width = tw; t.height = th; t.getContext('2d').drawImage(canvas, 0, 0, tw, th);
+    ctx.imageSmoothingEnabled = false; ctx.drawImage(t, 0, 0, tw, th, 0, 0, w, h); ctx.imageSmoothingEnabled = true;
+  }
+  if (X.glitch > 0) for (let i = 0; i < 6; i++) { const y = rnd(0, h), hh = rnd(4, 30); ctx.drawImage(canvas, 0, y, w, hh, rnd(-30, 30), y, w, hh); }
+  if (X.mir) { ctx.save(); ctx.translate(w, 0); ctx.scale(-1, 1); ctx.drawImage(canvas, 0, 0, w / 2, h, 0, 0, w / 2, h); ctx.restore(); }
+  if (X.kal) {
+    ctx.save(); ctx.translate(w, 0); ctx.scale(-1, 1); ctx.drawImage(canvas, 0, 0, w / 2, h, 0, 0, w / 2, h); ctx.restore();
+    ctx.save(); ctx.translate(0, h); ctx.scale(1, -1); ctx.drawImage(canvas, 0, 0, w, h / 2, 0, 0, w, h / 2); ctx.restore();
+  }
+  if (X.inv) { ctx.globalCompositeOperation = 'difference'; ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h); ctx.globalCompositeOperation = 'source-over'; }
+  if (X.vig > 0) {
+    const g = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.3, w / 2, h / 2, Math.max(w, h) * 0.7);
+    g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,' + X.vig + ')');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+  }
+  if (X.dnT > 0) { ctx.fillStyle = 'rgba(5,10,50,' + ((1 - Math.cos(X.t / X.dnT * TAU)) / 2 * 0.65).toFixed(3) + ')'; ctx.fillRect(0, 0, w, h); }
+  if (X.flashA > 0) { ctx.globalAlpha = X.flashA; ctx.fillStyle = X.flashC; ctx.fillRect(0, 0, w, h); ctx.globalAlpha = 1; }
+  ctx.textBaseline = 'top';
+  for (const m of X.msgs) {
+    ctx.globalAlpha = Math.min(1, m.l * 2);
+    const lines = m.t.split('\n');
+    if (m.k === 'dlg') {
+      const bh = lines.length * 24 + 16; ctx.fillStyle = 'rgba(0,0,0,0.75)'; ctx.fillRect(20, h - bh - 20, w - 40, bh);
+      ctx.fillStyle = '#fff'; ctx.font = '18px sans-serif'; lines.forEach((l, i) => ctx.fillText(l, 32, h - bh - 12 + i * 24));
+    } else {
+      ctx.font = 'bold ' + (m.k === 'stars' ? 56 : 26) + 'px sans-serif'; ctx.fillStyle = m.k === 'stars' ? '#ffd700' : '#ffe066';
+      ctx.shadowColor = '#000'; ctx.shadowBlur = 6;
+      lines.forEach((l, i) => ctx.fillText(l, (w - ctx.measureText(l).width) / 2, (m.k === 'stars' ? h / 2 - 30 : 50) + i * 34));
+      ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
+    }
+    ctx.globalAlpha = 1;
+  }
+  if (X.hud) {
+    X.ds += ((+vars.score || 0) - X.ds) * 0.2;
+    let s = 'Счёт: ' + Math.round(X.ds);
+    if (vars.lives !== undefined) s += '   ❤ ' + vars.lives;
+    if (X.combo > 1) s += '   x' + X.combo;
+    ctx.font = 'bold 20px sans-serif'; ctx.fillStyle = '#fff'; ctx.shadowColor = '#000'; ctx.shadowBlur = 4;
+    ctx.fillText(s, 12, 10); ctx.shadowBlur = 0; ctx.shadowColor = 'transparent';
+  }
+}
+const X_STATIC = new Set(['/blur', '/pixelate', '/vignette', '/3d', '/rotatecam', '/zoom', '/jump', '/solid', '/teleport', '/knockback', '/combo',
+  '/lives', '/inventory', '/level', '/savepoint', '/player', '/nearest', '/volume', '/pitch', '/music', '/pause', '/share', '/download', '/leaderboard',
+  '/gravityflip', '/timeslow', '/rewind', '/chaos', '/invert', '/mirror', '/kaleidoscope', '/rank', '/button', '/checkpoint']);
+function ext(c, rest) {
+  const t = rest.trim().split(/\s+/).filter(Boolean);
+  const N = (i, ...d) => { if (t[i] === undefined) { if (!d.length) throw new Error(c.w + ': не хватает аргумента ' + (i + 1) + ' (смотри подсказку внизу)'); return d[0]; } const v = num(t[i]); if (!isFinite(v)) throw new Error(c.w + ': аргумент ' + (i + 1) + ' — число'); return v; };
+  const off = /^(off|выкл)$/i.test(t[t.length - 1] || '');
+  const nm = (i, cmd) => { if (!t[i]) throw new Error(cmd + ': нужно имя объекта'); return need(t[i], cmd); };
+  const score = (d) => { vars.score = (+vars.score || 0) + d; };
+  switch (c.w) {
+    // ---- графика ----
+    case '/trail': { if (off) X.trails = X.trails.filter(x => x.n !== t[0]); else { nm(0, c.w); X.trails.push({ n: t[0], pts: [] }); } break; }
+    case '/shake': X.shake = N(0, 8); X.shkL = X.shk0 = Math.max(0.01, N(1, 0.4)); break;
+    case '/flash': X.flashC = t[0] ? checkColor(t[0]) : '#ffffff'; X.flashA = 0.8; break;
+    case '/blur': X.blur = off ? 0 : Math.max(0, N(0, 4)); break;
+    case '/pixelate': X.pix = off ? 0 : Math.max(0, N(0, 8)); break;
+    case '/vignette': X.vig = off ? 0 : Math.min(1, Math.max(0, N(0, 0.6))); break;
+    case '/3d': leaves(nm(0, c.w), n => { n.shadow = { c: 'rgba(0,0,0,0.5)', b: 14 }; }); break;
+    case '/rotatecam': X.rotcam = N(0, 0); break;
+    case '/zoom': X.zoom = Math.min(10, Math.max(0.1, N(0, 1))); break;
+    case '/particle': { const n = N(2, 30), col = t[3] ? checkColor(t[3]) : currentColor; spark({ x: N(0), y: N(1) }, col, Math.min(300, n)); break; }
+    case '/textwave': { const o = nm(0, c.w); leaves(o, n => { if (n.type === 'text') n.wave = off ? 0 : N(1, 6); }); break; }
+    case '/bgmove': X.bg = off ? 0 : N(0, 60); break;
+    case '/parallax': X.par = !off; X.bg = off ? 0 : N(0, 60); break;
+    case '/drawonpath': { const o = nm(0, c.w); o.pdraw = !off; delete o.pdl; break; }
+    // ---- механика ----
+    case '/player': nm(0, c.w); X.player = t[0]; break;
+    case '/platformer': { const o = nm(0, c.w); o.plat = true; o.phys = true; o.vx = o.vx || 0; o.vy = o.vy || 0; if (!X.player) X.player = t[0]; break; }
+    case '/solid': nm(0, c.w).solid = !off; break;
+    case '/collide': { const o = nm(0, c.w); if (off) delete o.col; else { o.col = true; o.phys = true; o.vx = o.vx || 0; o.vy = o.vy || 0; } break; }   // тело со столкновениями
+    case '/mass': { const o = nm(0, c.w), m = N(1); if (!(m > 0 && m <= 1e6)) throw new Error('/mass имя число (больше 0)'); o.mass = m; break; }
+    case '/friction': { const o = nm(0, c.w), f = N(1); if (!(f >= 0 && f <= 2)) throw new Error('/friction имя 0…2'); o.fric = f; break; }
+    case '/impulse': { const o = nm(0, c.w), ix = N(1), iy = N(2), m = o.mass || 1; o.phys = true; o.vx = (o.vx || 0) + ix / m; o.vy = (o.vy || 0) + iy / m; break; }
+    case '/nogravity': nm(0, c.w).ng = !off; break;                       // объект не падает
+    case '/hurt': nm(0, c.w).hurt = !off; break;                          // касание = урон игроку
+    case '/hitbox': { const o = nm(0, c.w), k = off ? 0 : N(1, 0.7); if (!(k >= 0 && k <= 2)) throw new Error('/hitbox имя 0.1–2 (или off)'); if (k) o.hb = k; else delete o.hb; break; }
+    case '/spin': { const o = nm(0, c.w); o.spin = off ? 0 : N(1, 360) * DEG; break; }   // платформер крутится в прыжке
+    case '/jump': {
+      const o = t.length > 1 || (t[0] && !isFinite(num(t[0]))) ? nm(0, c.w) : (X.player ? need(X.player, c.w) : last());
+      if (!o) throw new Error('/jump — нет объекта');
+      if ((o.plat || o.col) && !o.ground) break;
+      o.phys = true; o.vy = -N(t.length > 1 ? 1 : (isFinite(num(t[0])) ? 0 : 9), 500); o.ground = false; playX('jump'); break;
+    }
+    case '/coin': addObj({ id: nextId++, type: 'circle', x: N(0), y: N(1), r: 10, color: '#ffd700', coin: true, name: null }); break;
+    case '/enemy': { const o = nm(0, c.w), x = ctr(o).x; o.patrol = { x1: x - 100, x2: x + 100, s: N(1, 80), d: 1 }; o.hurt = true; break; }
+    case '/patrol': { const o = nm(0, c.w); o.patrol = { x1: Math.min(N(1), N(2)), x2: Math.max(N(1), N(2)), s: N(3, 80), d: 1 }; break; }
+    case '/boss': { const o = nm(0, c.w), x = ctr(o).x; o.hp = o.hpMax = N(1, 20); o.hpbar = true; o.hurt = true; o.patrol = { x1: x - 150, x2: x + 150, s: 60, d: 1 }; break; }
+    case '/checkpoint': X.cp = t.length >= 2 ? { x: N(0), y: N(1) } : (X.player ? ctr(need(X.player, c.w)) : null); if (!X.cp) throw new Error('/checkpoint x y'); break;
+    case '/powerup': { const o = nm(0, c.w); if (!['speed', 'shield', 'invis'].includes(t[1])) throw new Error('/powerup имя speed | shield | invis'); o.pu = t[1]; break; }
+    case '/teleport': { const o = nm(0, c.w), r = refPoint(o); shift(o, N(1) - r.x, N(2) - r.y); break; }
+    case '/knockback': { const o = nm(0, c.w); o.phys = true; o.vx = (o.vx || 0) + N(1, 300); o.vy = (o.vy || 0) + N(2, -200); break; }
+    case '/combo': X.combo++; X.comboT = 2; vars.combo = X.combo; score(X.combo * 10); break;
+    case '/lives': if (t[0] === 'add') vars.lives = (vars.lives === undefined ? 3 : vars.lives) + N(1, -1); else vars.lives = N(0, 3); vars.gameover = 0; break;
+    case '/timerbar': {
+      const sec = N(0, 10), w = N(3, 300);
+      addObj({ id: nextId++, type: 'rect', x: N(1, 20), y: N(2, 20), w, h: N(4, 16), rot: 0, rad: 4, color: t[5] ? checkColor(t[5]) : '#33dd66', name: 'timerbar', tbar: { t: sec, l: sec, w } });
+      everNames.add('timerbar'); vars.timeup = 0; break;
+    }
+    case '/dialogue': { const m = rest.match(/^["“”«»]([^"“”«»]+)["“”«»]\s*(\S+)?/); if (!m) throw new Error('/dialogue "текст" [сек]'); xMsg(m[1].replace(/\\n/g, '\n'), 'dlg', m[2] ? num(m[2]) : 3); break; }
+    case '/inventory': {
+      const L = lists.inventory || (lists.inventory = []);
+      if (t[0] === 'add' && t[1]) L.push(t[1]); else if (t[0] === 'remove' && t[1]) { const i = L.indexOf(t[1]); if (i >= 0) L.splice(i, 1); }
+      else if (t[0] === 'show') xMsg('Рюкзак: ' + (L.join(', ') || 'пусто'), 'dlg', 3); else if (t[0] === 'clear') L.length = 0;
+      else throw new Error('/inventory add | remove | show | clear [предмет]');
+      break;
+    }
+    case '/level': vars.level = N(0, (vars.level || 0) + 1); xMsg('Уровень ' + vars.level, 'ach', 2); break;
+    case '/savepoint': execCmd({ ...c, w: '/save' }); break;
+    // ---- ИИ ----
+    case '/shootat': {
+      const a = ctr(nm(0, c.w)), b = ctr(nm(1, c.w)), s = N(2, 300), d = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+      addObj({ id: nextId++, type: 'circle', x: a.x, y: a.y, r: 5, color: currentColor, name: null, vx: (b.x - a.x) / d * s, vy: (b.y - a.y) / d * s, phys: true, ng: true, hurt: true, bullet: true, life: 4 });
+      playX('click'); break;
+    }
+    case '/flee': { const o = nm(0, c.w); if (off) delete o.flee; else { nm(1, c.w); o.flee = { t: t[1], s: N(2, 120) }; } break; }
+    case '/aggro': { const o = nm(0, c.w); nm(1, c.w); o.aggro = { t: t[1], d: N(2, 200), s: N(3, 100) }; break; }
+    case '/nearest': {
+      if (t.length !== 2 || !VAR_NAME.test(t[0])) throw new Error('/nearest переменная от_кого');
+      const a = ctr(need(t[1], c.w)); let best = null, bd = Infinity;
+      for (const o of objects) { if (o.deleted || !o.name || o.name === t[1] || o.bullet) continue; const p = ctr(o), d = Math.hypot(p.x - a.x, p.y - a.y); if (d < bd) { bd = d; best = o.name; } }
+      if (!best) throw new Error('/nearest: нет других объектов с именем');
+      vars[t[0]] = best; break;
+    }
+    case '/spawn': case '/waves': case '/wave': {
+      const o = nm(0, c.w), n = Math.min(100, Math.floor(N(1, 5))), en = c.w !== '/spawn' || t[2] === 'enemy';
+      for (let i = 0; i < n; i++) {
+        const cp = cloneObj(o), b = ctr(cp), x = rnd(40, canvasW - 40);
+        shift(cp, x - b.x, rnd(40, canvasH * 0.6) - b.y);
+        if (en) { cp.hurt = true; cp.patrol = { x1: x - 100, x2: x + 100, s: rnd(50, 120), d: 1 }; }
+        addObj(cp);
+      }
+      break;
+    }
+    // ---- звук ----
+    case '/music': {
+      stopMusic();
+      if (off || !t.length) break;
+      const tune = TUNES[t[0]]; if (!tune) throw new Error('/music happy | sad | battle | off');
+      initAudio(); let i = 0;
+      X.musicH = setInterval(() => { if (!audioCtx || paused) return; try { tone(tune[i++ % tune.length], 0, 0.2, 'triangle', 0, 0.08); } catch (e) {} }, 260);
+      break;
+    }
+    case '/volume': X.vol = Math.min(1, Math.max(0, N(0, 1))); break;
+    case '/pitch': X.pitch = Math.min(4, Math.max(0.25, N(0, 1))); break;
+    // ---- мир ----
+    case '/camera': X.camT = off || !t[0] ? null : (nm(0, c.w), t[0]); break;
+    case '/weather': if (off || !t[0]) { X.weather = null; X.wp = []; } else if (t[0] === 'rain' || t[0] === 'snow') X.weather = t[0]; else throw new Error('/weather rain | snow | off'); break;
+    case '/daynight': X.dnT = off ? 0 : Math.max(2, N(0, 20)); break;
+    case '/portal': { const po = nm(0, c.w); nm(1, c.w); po.portal = t[1]; break; }
+    case '/key': nm(0, c.w).key = true; vars.haskey = 0; break;
+    case '/door': nm(0, c.w).door = true; break;
+    // ---- интерфейс ----
+    case '/button': {
+      const m = rest.match(/^["“”«»]([^"“”«»]+)["“”«»]\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)(?:\s+(\S+))?/);
+      if (!m) throw new Error('/button "текст" x y w h [имя]');
+      const [x, y, w, h] = [m[2], m[3], m[4], m[5]].map(num);
+      if (![x, y, w, h].every(isFinite)) throw new Error('/button: x y w h — числа');
+      const fs = Math.min(28, h * 0.45), lum = toRGBA(currentColor), dark = (lum[0] * 0.3 + lum[1] * 0.6 + lum[2] * 0.1) < 128;
+      const tx = { id: nextId++, type: 'text', text: m[1], x: 0, y: y + (h - fs) / 2, fontSize: fs, rot: 0, color: dark ? '#ffffff' : '#000000', name: null };
+      tx.x = x + (w - textW(tx)) / 2;
+      const g = { id: nextId++, type: 'group', name: m[6] || null, children: [{ id: nextId++, type: 'rect', x, y, w, h, rot: 0, rad: 10, color: currentColor, name: null }, tx] };
+      if (m[6]) everNames.add(m[6]);
+      addObj(g); break;
+    }
+    case '/pause': paused = true; setPauseIcon(); statusEl.textContent = '⏸ Пауза'; break;
+    case '/hud': case '/score': X.hud = !off; X.ds = +vars.score || 0; break;
+    case '/healthbar': { const o = nm(0, c.w); if (off) o.hpbar = false; else { if (o.hp === undefined) throw new Error('/healthbar: сначала /hp ' + t[0] + ' 100'); o.hpbar = true; o.hpMax = o.hpMax || o.hp; } break; }
+    // ---- сеть и данные ----
+    case '/share': try { navigator.clipboard.writeText(editor.value); xMsg('Код скопирован', 'ach', 2); } catch (e) { throw new Error('/share: нет доступа к буферу обмена'); } break;
+    case '/download': { const a = document.createElement('a'); a.download = (t[0] || 'rabbit') + '.png'; renderNow(); a.href = canvas.toDataURL('image/png'); a.click(); break; }
+    case '/leaderboard': {
+      let L = []; try { L = JSON.parse(localStorage.getItem('rabbit_lb') || '[]'); } catch (e) {}
+      if (t[0] === 'add') { L.push({ n: t[1] || '?', s: N(2, +vars.score || 0) }); L.sort((a, b) => b.s - a.s); L = L.slice(0, 10); try { localStorage.setItem('rabbit_lb', JSON.stringify(L)); } catch (e) {} }
+      else if (t[0] === 'clear') { try { localStorage.removeItem('rabbit_lb'); } catch (e) {} }
+      else if (t[0] === 'show') xMsg('Рекорды:\n' + (L.slice(0, 5).map((r, i) => (i + 1) + '. ' + r.n + ' — ' + r.s).join('\n') || 'пока пусто'), 'dlg', 4);
+      else throw new Error('/leaderboard add имя очки | show | clear');
+      break;
+    }
+    // ---- эксперименты ----
+    case '/gravityflip': gravity = -gravity; break;
+    case '/timeslow': X.ts = off ? 1 : Math.min(3, Math.max(0.05, N(0, 0.3))); break;
+    case '/rewind': {
+      const i = X.snaps.length - 1 - Math.round(N(0, 1) * 10);
+      if (i < 0) throw new Error('/rewind: истории пока нет (подожди немного)');
+      objects = JSON.parse(X.snaps[i]); deadCount = 0; X.snaps.length = i + 1; break;
+    }
+    case '/chaos': for (const o of objects) if (!o.deleted) { o.phys = true; o.vx = rnd(-400, 400); o.vy = rnd(-500, 100); } break;
+    case '/glitch': X.glitch = N(0, 0.5); break;
+    case '/invert': X.inv = !off; break;
+    case '/mirror': X.mir = !off; break;
+    case '/kaleidoscope': X.kal = !off; break;
+    case '/gravitywell': X.wells.push({ x: N(0), y: N(1), k: N(2, 1), r: 0, hole: false }); break;
+    case '/blackhole': X.wells.push({ x: N(0), y: N(1), k: 3, r: N(2, 100), hole: true }); break;
+    // ---- достижения ----
+    case '/achievement': { const m = rest.match(/^["“”«»]([^"“”«»]+)["“”«»]/); if (!m) throw new Error('/achievement "текст"'); xMsg('🏆 ' + m[1], 'ach', 3); playX('win'); break; }
+    case '/stars': { const n = Math.min(3, Math.max(0, Math.floor(N(0, 3)))); xMsg('★'.repeat(n) + '☆'.repeat(3 - n), 'stars', 3); if (n) playX('win'); break; }
+    case '/rank': { const r = Math.floor((+vars.score || 0) / 10) + 1; vars.rank = r; xMsg('Ранг ' + r, 'ach', 2); break; }
+    case '/bonus': { const n = N(0, 100); score(n); xMsg('+' + n, 'ach', 1.5); playX('coin'); break; }
+    default: return false;
+  }
+  if (!X_STATIC.has(c.w)) { X.active = true; wakePhys(); }
+  return true;
+}
+
+function execCmd(c) {
+  if (c.w === '/var' || c.w === '/add') { varCmd(c); return null; }
+
+  const rest = subst(c.arg);     // $имя заменяется на значение
+
+  // /sp 1 или /sp1 или /sp0,5
+  const spm = c.w.match(/^\/sp(\d*[.,]?\d*)$/);
+  if (spm) {
+    const v = spm[1] !== '' ? num(spm[1]) : numArg(rest);
+    if (!isFinite(v) || v < 0 || v > 3600) {
+      throw new Error('/sp сек — число от 0 до 3600 (например /sp 1)');
+    }
+    speed = v;
+    return null;
+  }
+
+  switch (c.w) {
+    // ---- ГРУППЫ ----
+    // ---- ФИГУРЫ, ОБВОДКА, СВЕЧЕНИЕ ----
+    case '/poly':
+    case '/star': {
+      const star = c.w === '/star';
+      const usage = star ? '/star x y радиус лучей [глубина 0.1–0.9]' : '/poly x y радиус сторон [глубина звезды 0.1–0.9]';
+      const t = rest.trim().split(/\s+/).filter(Boolean);
+      if (t.length < 4 || t.length > 5) throw new Error(usage);
+      const p = t.map(num);
+      if (p.some(v => !isFinite(v))) throw new Error(usage);
+      const n = Math.round(p[3]);
+      if (p[2] < 0) throw new Error(c.w + ': радиус не может быть меньше 0');
+      if (n < 3 || n > 64) throw new Error(c.w + ': сторон должно быть от 3 до 64');
+      let inner = star ? 0.45 : 0;
+      if (t.length === 5) { inner = p[4]; if (!(inner > 0 && inner < 1)) throw new Error(c.w + ': глубина — число между 0 и 1 (например 0.5)'); }
+      addObj({ id: nextId++, type: 'circle', x: p[0], y: p[1], r: p[2], n, inner, rot: 0, color: currentColor, name: null });
+      return null;
+    }
+    case '/stroke': {
+      const usage = '/stroke имя толщина [#цвет]  (или /stroke имя off)';
+      const a = objAndArgs(rest.trim().split(/\s+/).filter(Boolean), '/stroke');
+      const o = a[0], t = a[1];
+      if (!t.length) throw new Error(usage);
+      if (/^(off|выкл)$/i.test(t[0])) { leaves(o, n => { delete n.sw; delete n.sc; }); return null; }
+      const w = num(t[0]);
+      if (!isFinite(w) || w < 0 || w > 100) throw new Error(usage);
+      const col = t[1] ? checkColor(t[1]) : '#000000';
+      leaves(o, n => { if (n.type === 'line') return; if (w > 0) { n.sw = w; n.sc = col; } else { delete n.sw; delete n.sc; } });
+      return null;
+    }
+    case '/glow': {
+      const usage = '/glow имя сила [#цвет]  (или /glow имя off)';
+      const a = objAndArgs(rest.trim().split(/\s+/).filter(Boolean), '/glow');
+      const o = a[0], t = a[1];
+      if (!t.length) throw new Error(usage);
+      if (/^(off|выкл)$/i.test(t[0])) { leaves(o, n => { delete n.glow; }); return null; }
+      const b = num(t[0]);
+      if (!isFinite(b) || b < 0 || b > 200) throw new Error(usage);
+      const col = t[1] ? checkColor(t[1]) : null;
+      leaves(o, n => { if (b > 0) n.glow = col ? { b, c: col } : { b }; else delete n.glow; });
+      return null;
+    }
+    // ---- СПРАЙТЫ ----
+    case '/sprite': {
+      const usage = '/sprite имя x y [ширина высота]';
+      const t = rest.trim().split(/\s+/).filter(Boolean);
+      if (t.length !== 3 && t.length !== 5) throw new Error(usage);
+      const s = SPR[t[0]];
+      if (!s) throw new Error('/sprite: спрайта «' + t[0] + '» нет — загрузи его кнопкой 🖼');
+      const p = t.slice(1).map(num);
+      if (p.some(v => !isFinite(v))) throw new Error(usage);
+      const w = p.length === 4 ? p[2] : s.fw, h = p.length === 4 ? p[3] : s.h;
+      if (w < 0 || h < 0) throw new Error('/sprite: размер не может быть меньше 0');
+      addObj({ id: nextId++, type: 'rect', x: p[0], y: p[1], w, h, rot: 0, color: currentColor, img: t[0], name: null });
+      return null;
+    }
+    case '/skin': {
+      const t = rest.trim().split(/\s+/).filter(Boolean);
+      if (t.length !== 2) throw new Error('/skin объект спрайт');
+      const o = need(t[0], '/skin');
+      if (o.type !== 'rect') throw new Error('/skin: «' + t[0] + '» — не прямоугольник и не спрайт');
+      if (!SPR[t[1]]) throw new Error('/skin: спрайта «' + t[1] + '» нет — загрузи его кнопкой 🖼');
+      o.img = t[1];
+      return null;
+    }
+    case '/flip': {
+      const t = rest.trim().split(/\s+/).filter(Boolean);
+      const o = t.length ? need(t[0], '/flip') : last();
+      if (!o) throw new Error('/flip — нет объекта');
+      if (!o.img) throw new Error('/flip: это не спрайт');
+      o.flip = !o.flip;
+      return null;
+    }
+    case '/frame': {
+      const a = objNum(rest, '/frame [имя] номер_кадра', true);
+      if (!a[0].img) throw new Error('/frame: это не спрайт');
+      a[0].frame = Math.max(0, Math.floor(a[1]));
+      return null;
+    }
+    case '/spriteanim': {
+      const a = objNum(rest, '/spriteanim [имя] кадров_в_секунду', true);
+      if (!a[0].img) throw new Error('/spriteanim: это не спрайт');
+      a[0].fps = a[1] > 0 ? a[1] : 0;
+      if (a[0].fps) wakePhys();
+      return null;
+    }
+    // ---- МУЛЬТИПЛЕЕР ----
+    case '/netown': {
+      const names = rest.trim().split(/\s+/).filter(Boolean);
+      if (!names.length) throw new Error('/netown имя [имя2 ...] — твои объекты, другой игрок их увидит');
+      names.forEach(n => net.own.add(n));
+      netStart();
+      return null;
+    }
+    case '/netvar': {
+      const names = rest.trim().split(/\s+/).filter(Boolean);
+      if (!names.length) throw new Error('/netvar имя [имя2 ...] — переменные, общие для обоих игроков');
+      names.forEach(n => { net.vars.add(n); });
+      netStart();
+      return null;
+    }
+    case '/netsend': {
+      const t = rest.trim().split(/\s+/).filter(Boolean);
+      if (!t.length) throw new Error('/netsend имя [значения...] — сообщение другому игроку (ловит //net имя)');
+      netSend({ t: 'e', n: t[0], a: t.slice(1, 9).map(parseItem) }, true);
+      return null;
+    }
+    case '/group':
+      groupStack.push({ start: objects.length, line: c.line });
+      return null;
+    case '//s': {
+      if (groupStack.length <= groupBase) throw new Error('//s без /group');
+      const g = groupStack.pop();
+      const all = objects.splice(g.start);
+      const part = all.filter(o => !o.deleted);
+      deadCount = Math.max(0, deadCount - (all.length - part.length));   // удалённые ушли из списка
+      if (!part.length) throw new Error('//s — в группе нет объектов');
+      objects.push({ id: nextId++, type: 'group', children: part, name: null });
+      return null;
+    }
+
+    // ---- РИСУНКИ ----
+    case '/use': {
+      const a = nameAndNums(rest, 2, '/use имя x y');
+      stamp(a[0], a[1], a[2]);
+      return null;
+    }
+
+    // ---- НАСТРОЙКИ ----
+    case '/size': {
+      noArt('/size');
+      const p = nums(rest, 2, '/size W H');
+      canvasW = Math.round(Math.min(2000, Math.max(50, p[0])));
+      canvasH = Math.round(Math.min(2000, Math.max(50, p[1])));
+      return null;
+    }
+    case '/bgcolor':
+      noArt('/bgcolor');
+      bgColor = checkColor(rest);
+      return null;
+    case '/color':
+      currentColor = checkColor(rest);
+      return null;
+
+    // ---- ОБЪЕКТЫ ----
+    case '/circle': {
+      const p = nums(rest, 3, '/circle x y r');
+      if (p[2] < 0) throw new Error('/circle: радиус не может быть меньше 0');
+      addObj({ id: nextId++, type: 'circle', x: p[0], y: p[1], r: p[2], color: currentColor, name: null });
+      return null;
+    }
+    case '/rect': {
+      const p = nums(rest, 4, '/rect x y w h');
+      addObj({ id: nextId++, type: 'rect', x: p[0], y: p[1], w: p[2], h: p[3], rot: 0, color: currentColor, name: null });
+      return null;
+    }
+    case '/line': {
+      const p = nums(rest, 4, '/line x1 y1 x2 y2');
+      addObj({ id: nextId++, type: 'line', x1: p[0], y1: p[1], x2: p[2], y2: p[3], color: currentColor, lw: curLW, name: null });
+      return null;
+    }
+    case '/text': {
+      // понимает и обычные кавычки, и «умные» с телефонной клавиатуры
+      const usage = '/text "текст" x y [размер]';
+      const m = rest.match(/^["“”«»]([^"“”«»]+)["“”«»]\s+(\S+)\s+(\S+)(?:\s+(\S+))?/);
+      if (!m) throw new Error(usage);
+      const x = num(m[2]), y = num(m[3]);
+      const fs = m[4] ? num(m[4]) : 20;
+      if (!isFinite(x) || !isFinite(y)) throw new Error(usage);
+      if (!isFinite(fs) || fs <= 0) throw new Error('/text: размер букв должен быть больше 0');
+      addObj({
+        id: nextId++, type: 'text', text: m[1], x, y,
+        fontSize: fs, rot: 0, color: currentColor, name: null
+      });
+      return null;
+    }
+
+    // ---- ИМЯ ----
+    case '/id': {
+      if (!/^[^\s.]+$/.test(rest)) throw new Error('/id имя — без пробелов и точек');
+      const o = last();
+      if (!o) throw new Error('/id — нет объекта');
+      o.name = rest;
+      everNames.add(rest);
+      return null;
+    }
+
+    // ---- ДВИЖЕНИЕ ----
+    case '/move': {
+      // /move dx dy — двигает последний объект; /move имя dx dy — объект по имени
+      const t = rest.trim() === '' ? [] : rest.trim().split(/\s+/);
+      let o, p;
+      if (t.length === 3 && !isFinite(num(t[0]))) {
+        o = byName(t[0]);
+        if (!o) throw new Error('/move: "' + t[0] + '" не найден');
+        p = nums(t.slice(1).join(' '), 2, '/move [имя] dx dy');
+      } else {
+        p = nums(rest, 2, '/move [имя] dx dy');
+        o = last();
+        if (!o) throw new Error('/move — нет объекта');
+      }
+      return anim(moveTween(o, p[0], p[1]));
+    }
+    case '/moveto': {
+      const a = nameAndNums(rest, 2, '/moveTo имя x y');
+      const o = byName(a[0]);
+      if (!o) throw new Error('/moveTo: "' + a[0] + '" не найден');
+      const ref = refPoint(o);
+      return anim(moveTween(o, a[1] - ref.x, a[2] - ref.y));
+    }
+    case '/rotatemove': {
+      const usage = '/rotatemove имя угол  (или  /rotatemove имя угол x y)';
+      const t = rest.trim() === '' ? [] : rest.trim().split(/\s+/);
+      if (t.length !== 2 && t.length !== 4) throw new Error(usage);
+      const v = t.slice(1).map(num);
+      if (v.some(n => !isFinite(n))) throw new Error(usage);
+      const o = byName(t[0]);
+      if (!o) throw new Error('/rotatemove: "' + t[0] + '" не найден');
+      let px, py;
+      if (v.length === 3) { px = v[1]; py = v[2]; }
+      else { const b = bbox(o); px = (b.x1 + b.x2) / 2; py = (b.y1 + b.y2) / 2; }
+      return anim(rotTween(o, v[0] * DEG, px, py));
+    }
+    case '/colorto': {
+      const m = rest.match(/^(\S+)\s+(.+)$/);
+      if (!m) throw new Error('/colorTo имя #цвет');
+      const o = byName(m[1]);
+      if (!o) throw new Error('/colorTo: "' + m[1] + '" не найден');
+      return anim(colorTween(o, checkColor(m[2])));
+    }
+
+    // ---- СЛУЧАЙНОЕ ЧИСЛО И ЗВУК ----
+    // /random имя мин макс: целые границы дают целое число, иначе дробное
+    case '/random': {
+      const usage = '/random имя мин макс  (например: /random x 100 700)';
+      const t = rest.trim().split(/\s+/);
+      if (t.length !== 3 || !VAR_NAME.test(t[0])) throw new Error(usage);
+      let a = num(t[1]), b = num(t[2]);
+      if (!isFinite(a) || !isFinite(b)) throw new Error(usage);
+      if (a > b) { const x = a; a = b; b = x; }
+      vars[t[0]] = (Number.isInteger(a) && Number.isInteger(b))
+        ? a + Math.floor(Math.random() * (b - a + 1))
+        : a + Math.random() * (b - a);
+      return null;
+    }
+    case '/sound':
+      playSound(rest);
+      return null;
+
+    // ===== v8 =====
+    case '/alpha': {
+      const [o, v] = objNum(rest, '/alpha [имя] 0…1', true);
+      const a = Math.max(0, Math.min(1, v));
+      leaves(o, n => { n.alpha = a; });
+      return null;
+    }
+    // ---- СЛОИ: больше число — выше. По умолчанию у всех 0, внутри слоя порядок создания ----
+    case '/layer': {
+      const [o, v] = objNum(rest, '/layer [имя] число', true);
+      const L = Math.max(-1000, Math.min(1000, Math.round(v)));
+      if (L) o.layer = L; else delete o.layer;
+      return null;
+    }
+    case '/front':
+    case '/back': {
+      const t = rest.trim();
+      const o = t ? need(t, c.w) : last();
+      if (!o) throw new Error(c.w + ' — нет объекта');
+      let m = c.w === '/front' ? -Infinity : Infinity;
+      for (const x of objects) {
+        if (x === o || x.deleted) continue;
+        const l = x.layer || 0;
+        m = c.w === '/front' ? Math.max(m, l) : Math.min(m, l);
+      }
+      if (isFinite(m)) o.layer = c.w === '/front' ? Math.min(1000, m + 1) : Math.max(-1000, m - 1);
+      return null;
+    }
+    case '/shadow': {
+      const usage = '/shadow имя #цвет [размытие]  (или /shadow имя off)';
+      const m = rest.match(/^(\S+)\s+(.+?)(?:\s+(\d+(?:[.,]\d+)?))?$/);
+      if (!m) throw new Error(usage);
+      const o = need(m[1], '/shadow');
+      if (/^(off|выкл)$/i.test(m[2])) leaves(o, n => { delete n.shadow; });
+      else {
+        const col = checkColor(m[2]), b = m[3] ? num(m[3]) : 15;
+        leaves(o, n => { n.shadow = { c: col, b }; });
+      }
+      return null;
+    }
+    case '/gradient': {
+      const usage = '/gradient имя #цвет1 #цвет2  (или /gradient имя off)';
+      const t = rest.trim().split(/\s+/);
+      if (t.length === 2 && /^(off|выкл)$/i.test(t[1])) { leaves(need(t[0], '/gradient'), n => { delete n.grad; }); return null; }
+      if (t.length !== 3) throw new Error(usage);
+      const o = need(t[0], '/gradient'), c1 = checkColor(t[1]), c2 = checkColor(t[2]);
+      leaves(o, n => { if (n.type !== 'line') n.grad = [c1, c2]; });
+      return null;
+    }
+    case '/linewidth': {
+      const usage = '/lineWidth толщина  (или /lineWidth имя толщина)';
+      const t = rest.trim().split(/\s+/).filter(Boolean);
+      let w;
+      if (t.length === 1) { w = num(t[0]); if (!(w > 0 && w <= 200)) throw new Error(usage); curLW = w; return null; }
+      const [o, v] = objNum(rest, usage, false);
+      if (!(v > 0 && v <= 200)) throw new Error(usage);
+      leaves(o, n => { if (n.type === 'line') n.lw = v; });
+      return null;
+    }
+    case '/round': {
+      const [o, v] = objNum(rest, '/round [имя] радиус', true);
+      if (v < 0) throw new Error('/round: радиус не может быть меньше 0');
+      leaves(o, n => { if (n.type === 'rect') n.rad = v; });
+      return null;
+    }
+    case '/border': {
+      noArt('/border');
+      const t = rest.trim().split(/\s+/).filter(Boolean);
+      let o, on = true;
+      if (!t.length) o = last();
+      else { o = need(t[0], '/border'); if (t[1] && /^(off|выкл)$/i.test(t[1])) on = false; }
+      if (!o) throw new Error('/border — нет объекта');
+      o.border = on;
+      if (on) clampObj(o);
+      return null;
+    }
+    case '/hp': {
+      const [o, v] = objNum(rest, '/hp [имя] число', true);
+      o.hp = v;
+      if (v <= 0) markDead(o);
+      return null;
+    }
+    case '/damage': {
+      const [o, v] = objNum(rest, '/damage [имя] число', true);
+      if (o.hp === undefined) throw new Error('/damage: у объекта нет hp — сначала /hp имя 100');
+      o.hp = Math.max(0, o.hp - v);
+      if (o.hp <= 0) markDead(o);
+      return null;
+    }
+    case '/clone': {
+      const t = rest.trim().split(/\s+/).filter(Boolean);
+      if (!t.length || t.length > 2) throw new Error('/clone имя [новое_имя]');
+      const cp = cloneObj(need(t[0], '/clone'));
+      if (t[1]) {
+        if (!/^[^\s.]+$/.test(t[1])) throw new Error('/clone: имя без пробелов и точек');
+        cp.name = t[1]; everNames.add(t[1]);
+      }
+      addObj(cp);
+      if (cp.phys || cp.follow) wakePhys();
+      return null;
+    }
+    case '/follow': {
+      noArt('/follow');
+      const usage = '/follow кто за_кем [скорость]  (или /follow кто off)';
+      const t = rest.trim().split(/\s+/).filter(Boolean);
+      if (t.length < 2 || t.length > 3) throw new Error(usage);
+      const o = need(t[0], '/follow');
+      if (/^(off|выкл)$/i.test(t[1])) { delete o.follow; return null; }
+      if (!everNames.has(t[1])) throw new Error('/follow: объект "' + t[1] + '" не найден (нужен /id ' + t[1] + ')');
+      const k = t[2] ? num(t[2]) : 2;
+      if (!(k > 0)) throw new Error(usage);
+      o.follow = { t: t[1], k };
+      wakePhys();
+      return null;
+    }
+    case '/gravity': {
+      noArt('/gravity');
+      const g = numArg(rest);
+      if (!isFinite(g)) throw new Error('/gravity число  (например /gravity 0.5)');
+      gravity = g;
+      wakePhys();
+      return null;
+    }
+    case '/vx':
+    case '/vy': {
+      noArt(c.w);
+      const [o, v] = objNum(rest, c.w + ' [имя] скорость  (пикселей в секунду)', true);
+      if (c.w === '/vx') o.vx = v; else o.vy = v;
+      o.phys = true;
+      o.vx = o.vx || 0; o.vy = o.vy || 0;
+      wakePhys();
+      return null;
+    }
+    case '/bounce': {
+      noArt('/bounce');
+      const usage = '/bounce имя [упругость 0…1]  (или /bounce имя off)';
+      const t = rest.trim().split(/\s+/).filter(Boolean);
+      if (!t.length || t.length > 2) throw new Error(usage);
+      const o = need(t[0], '/bounce');
+      if (t[1] && /^(off|выкл)$/i.test(t[1])) { delete o.bounce; return null; }
+      const k = t[1] === undefined ? 0.85 : num(t[1]);
+      if (!isFinite(k) || k < 0) throw new Error(usage);
+      o.bounce = k; o.phys = true; o.vx = o.vx || 0; o.vy = o.vy || 0;
+      wakePhys();
+      return null;
+    }
+    case '/freeze': {
+      const o = need(rest.trim(), '/freeze');
+      delete o.phys; delete o.follow; o.vx = 0; o.vy = 0;
+      return null;
+    }
+    case '/ease': {
+      const m = rest.trim().toLowerCase() || 'inout';
+      if (m === 'off' || m === 'выкл') easeMode = 'linear';
+      else if (EASE[m]) easeMode = m;
+      else throw new Error('/ease linear | in | out | inout | bounce | off');
+      return null;
+    }
+    case '/soundontouch': {
+      noArt('/soundOnTouch');
+      const usage = '/soundOnTouch a b [звук]  (или /soundOnTouch a b off)';
+      const t = rest.trim().split(/\s+/).filter(Boolean);
+      if (t.length < 2 || t.length > 3) throw new Error(usage);
+      if (t[2] && /^(off|выкл)$/i.test(t[2])) { touchSounds = touchSounds.filter(x => !(x.a === t[0] && x.b === t[1])); return null; }
+      const s = (t[2] || 'pop').toLowerCase();
+      if (!Object.prototype.hasOwnProperty.call(SOUNDS, s)) throw new Error('/soundOnTouch: звук — beep, click, pop, boom, win или lose');
+      touchSounds.push({ a: t[0], b: t[1], s, was: false });
+      wakePhys();
+      return null;
+    }
+    case '/list': {
+      const t = rest.trim().split(/\s+/).filter(Boolean);
+      if (!t.length || !VAR_NAME.test(t[0])) throw new Error('/list имя значение значение ...  (например: /list colors #f00 #0f0)');
+      lists[t[0]] = t.slice(1).map(parseItem);
+      return null;
+    }
+    case '/push': {
+      const t = rest.trim().split(/\s+/).filter(Boolean);
+      if (t.length < 2) throw new Error('/push список значение');
+      const L = listOf(t[0], '/push');
+      if (L.length + t.length - 1 > 10000) throw new Error('/push: в списке больше 10000 элементов');
+      for (const x of t.slice(1)) L.push(parseItem(x));
+      return null;
+    }
+    case '/get':
+    case '/len':
+    case '/pick': {
+      const t = rest.trim().split(/\s+/).filter(Boolean);
+      const usage = c.w === '/get' ? '/get переменная список номер' : c.w + ' переменная список';
+      if (t.length !== (c.w === '/get' ? 3 : 2) || !VAR_NAME.test(t[0])) throw new Error(usage);
+      const L = listOf(t[1], c.w);
+      if (c.w === '/len') vars[t[0]] = L.length;
+      else if (c.w === '/pick') {
+        if (!L.length) throw new Error('/pick: список пуст');
+        vars[t[0]] = L[Math.floor(Math.random() * L.length)];
+      } else {
+        const i = Math.floor(num(t[2]));
+        if (!(i >= 1 && i <= L.length)) throw new Error('/get: в списке "' + t[1] + '" нет элемента ' + t[2]);
+        vars[t[0]] = L[i - 1];
+      }
+      return null;
+    }
+    case '/randomcolor': {
+      const nm = rest.trim(), col = randColor();
+      if (!nm) { currentColor = col; return null; }
+      leaves(need(nm, '/randomColor'), n => { n.color = col; });
+      return null;
+    }
+    case '/style': {
+      const t = rest.trim().split(/\s+/).filter(Boolean);
+      if (t.length && /^(копировать|copy)$/i.test(t[0])) t.shift();
+      if (t.length !== 2) throw new Error('/style откуда куда  (копирует цвет, размер, прозрачность, тень)');
+      copyStyle(need(t[0], '/style'), need(t[1], '/style'));
+      return null;
+    }
+    case '/save': {
+      noArt('/save');
+      if (groupStack.length) throw new Error('/save: сначала закрой /group через //s');
+      try {
+        localStorage.setItem(stateKey(rest), JSON.stringify({
+          o: objects.filter(x => !x.deleted), v: vars, l: lists, bg: bgColor,
+          w: canvasW, h: canvasH, c: currentColor, n: nextId, g: gravity
+        }));
+      } catch (e) { throw new Error('/save: ' + e.message); }
+      return null;
+    }
+    case '/load': {
+      noArt('/load');
+      const key = stateKey(rest);
+      let d = null;
+      try { const s = localStorage.getItem(key); d = s ? JSON.parse(s) : null; } catch (e) { d = null; }
+      if (!d || !Array.isArray(d.o)) throw new Error('/load: сохранения "' + (rest.trim() || 'main') + '" нет — сначала /save');
+      const mx = vars.mouseX, my = vars.mouseY;
+      objects = d.o; deadCount = 0; groupStack = [];
+      vars = Object.assign(Object.create(null), d.v); vars.mouseX = mx; vars.mouseY = my;
+      lists = Object.assign(Object.create(null), d.l);
+      bgColor = d.bg; canvasW = d.w; canvasH = d.h; currentColor = d.c; nextId = d.n; gravity = d.g || 0;
+      for (const o of objects) if (o.name) everNames.add(o.name);
+      wakePhys();
+      return null;
+    }
+
+    // ---- ОТМЕНА ----
+    // /no имя — отменить таймер; /no — отменить все таймеры и очередь ожидающих действий
+    case '/no': {
+      noArt('/no');
+      const name = rest.trim();
+      if (!name) { cancelAllTimers(); return null; }
+      if (!/^[^\s.]+$/.test(name)) throw new Error('/no [имя таймера]');
+      if (!cancelTimer(name) && !everTimers.has(name)) {
+        throw new Error('/no: таймер "' + name + '" не найден');
+      }
+      return null;
+    }
+
+    // ---- УДАЛЕНИЕ ----
+    case '/delete': {
+      if (!rest) {
+        const o = last();
+        if (o) markDead(o);
+        return null;
+      }
+      const o = byName(rest);
+      if (!o) throw new Error('/delete: "' + rest + '" не найден');
+      markDead(o);
+      return null;
+    }
+    case '/clear':
+      noArt('/clear');
+      objects = [];
+      groupStack = [];
+      deadCount = 0;
+      return null;
+  }
+
+  if (ext(c, rest)) return null;
+  throw new Error('Неизвестная команда: ' + c.text + hintFor(c.w));
+}
+
+// ===== ПРИМЕР =====
+function loadExample() {
+  editor.value = `# 🐰 Пример Rabbit v8
+
+/size 800 600
+/bgcolor #1a1a2e
+
+# Переменные: /var имя значение, а $имя подставляет значение
+/var score 0
+/var starY 30
+
+# Дом: /group ... //s склеивает всё в один объект
+/group
+/color #8b4513
+/rect 300 400 200 150
+/color #8a3a3a
+/line 280 400 400 330
+/line 400 330 520 400
+/color #5a3a1a
+/rect 380 480 40 70
+/color #ffdd66
+/rect 340 430 40 40
+//s
+/id house
+
+# Свой рисунок: /art — рисуем один раз, /use — ставим сколько хотим
+/art flower
+/color #ff66aa
+/circle 10 0 8
+/circle 0 10 8
+/circle 20 10 8
+/circle 10 20 8
+/color #ffdd00
+/circle 10 10 7
+/end
+
+/use flower 80 120
+/use flower 330 180
+/use flower 560 110
+
+# Цикл с переменной: звёздочки в ряд
+/var i 0
+/repeat 8
+/add i 1
+/color #ffffff
+/circle $i*90 $starY+$i*4 3
+/end
+
+# Квадрат-солнышко, который будет вращаться
+/color #ffdd00
+/rect 640 50 70 70
+/id sun
+
+# Мячик
+/color #ff3355
+/circle 100 500 20
+/id ball
+
+# Память: сохраняем действия, потом повторяем через /do
+/memory hop
+/sp 0.4
+/moveTo ball 250 500
+//but ball.x > 200
+/colorTo ball #00ff88
+//else
+/colorTo ball #ff3355
+/end
+/moveTo ball 100 500
+/colorTo ball #ff3355
+/sp 0
+/end
+
+# /sp 1 — следующие действия плавно, за 1 секунду
+/sp 1
+/rotatemove sun 180
+/sp 0
+/repeat 2
+/do hop
+/end
+
+# Таймер: каждые 3 секунды солнышко поворачивается (всего 5 раз).
+# /no spin отменяет его (ниже это делает сброс счёта)
+/timer spin 3 5
+/sp 0.5
+/rotatemove sun 45
+/sp 0
+/end
+
+# Кнопка и счёт
+/color #22cc66
+/rect 20 20 150 56
+/id btn
+/color #000000
+/text "Нажми" 55 38 22
+/color #ffffff
+/text "Счёт: $score" 20 100 24
+/id label
+
+# //tap: нажали на кнопку — счёт растёт, мячик едет, на 10 всё сначала
+//tap btn
+/sound pop
+/add score 1
+//but $score > 10
+/var score 0
+/no spin
+/end
+/delete label
+/color #ffffff
+/text "Счёт: $score" 20 100 24
+/id label
+/sp 0.4
+/moveTo ball $score*60+100 500
+/rotatemove sun 90
+/sp 0
+/end
+
+# //tap: нажали в прямоугольник x1 y1 x2 y2 (на дом)
+//tap 280 330 520 550
+/sp 1
+/rotatemove house 360
+/sp 0
+/end
+
+# Клавиши: стрелки (или A/D) двигают мячик
+//key left a
+/move ball -20 0
+/end
+//key right d
+/move ball 20 0
+/end
+
+/color #ffffff
+/text "Нажми на кнопку или на дом" 250 570 18`;
+  updateLineNums();
+  hideErrors();
+}
+
+// ===== ДЕМО v8 =====
+// ===== СОХРАНЕНИЕ =====
+function saveCode() {
+  try {
+    localStorage.setItem('rabbit_code', editor.value);
+    const prev = statusEl.textContent;
+    const msg = '💾 Сохранено';
+    statusEl.textContent = msg;
+    setTimeout(() => { if (statusEl.textContent === msg) statusEl.textContent = prev; }, 1500);
+  } catch (e) {
+    statusEl.textContent = '❌ Ошибка сохранения';
+  }
+}
+function loadSaved() {
+  try {
+    const s = localStorage.getItem('rabbit_code');
+    if (s !== null) editor.value = s;      // пустой код — тоже сохранённый, пример не подсовываем
+    else loadExample();
+  } catch (e) {
+    loadExample();
+  }
+}
+
+// ===== КНОПКИ =====
+function exitStage() {
+  stopAll();
+  paused = false;
+  setPauseIcon();
+  stage.classList.remove('show');
+  statusEl.textContent = currentErrors.length ? '⚠ Ошибок: ' + currentErrors.length : 'Готово';
+  showErrors(currentErrors);
+}
+
+document.getElementById('runBtn').onclick = () => {
+  stage.classList.add('show');
+  initAudio();
+  try { run(); } catch (e) { fatal(e); }
+};
+function setPauseIcon() {
+  document.getElementById('pauseBtn').textContent = paused ? '▶' : '⏸';
+}
+document.getElementById('pauseBtn').onclick = () => {
+  if (stopped && !paused) return;
+  paused = !paused;
+  setPauseIcon();
+  if (paused) statusEl.textContent = '⏸ Пауза';
+  else if (runCtl && !runCtl.isBusy()) runCtl.refresh();
+  else statusEl.textContent = '▶ Работает...';
+};
+document.getElementById('saveBtn').onclick = saveCode;
+document.getElementById('exampleBtn').onclick = () => {
+  if (confirm('Загрузить пример? Текущий код перезапишется.')) loadExample();
+};
+document.getElementById('clearBtn').onclick = () => {
+  if (confirm('Стереть весь код?')) {
+    editor.value = '';
+    updateLineNums();
+    hideErrors();
+  }
+};
+// ===== v11: ПОИСК БАГОВ =====
+const BLOCK_OPEN = new Set(['/repeat', '/art', '/memory', '/timer', '//but', '//tap', '//key', '//net']);
+const OBJ_ARG = new Set(['/collide', '/mass', '/friction', '/impulse', '/moveto', '/delete', '/colorto', '/shadow', '/gradient', '/freeze', '/vx', '/vy', '/alpha', '/stroke', '/glow', '/clone', '/layer', '/front', '/back']);
+const VAR_MAKERS = new Set(['/var', '/random', '/list', '/get', '/len', '/pick', '/push', '/randomcolor']);
+let KNOWN_CMDS = null;
+function knownCmds() {
+  if (KNOWN_CMDS) return KNOWN_CMDS;
+  KNOWN_CMDS = new Set();
+  const src = Array.from(document.scripts).map(x => x.textContent).join('\n');
+  for (const m of src.matchAll(/'(\/{1,2}[A-Za-z][A-Za-z0-9]*)'/g)) KNOWN_CMDS.add(m[1].toLowerCase());
+  document.querySelectorAll('#hint b').forEach(b => { const w = b.textContent.trim().split(/\s+/)[0]; if (w[0] === '/') KNOWN_CMDS.add(w.toLowerCase()); });
+  ['/end', '//s', '//else', '/group', '/sp', '/3d', '/poly', '/star', '/stroke', '/glow', '/nogravity', '/hurt', '/hitbox', '/spin', '//net', '/netown', '/netvar', '/netsend'].forEach(w => KNOWN_CMDS.add(w));
+  return KNOWN_CMDS;
+}
+function dist(a, b) {
+  const d = [];
+  for (let i = 0; i <= a.length; i++) { d[i] = [i]; }
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++)
+    d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+  return d[a.length][b.length];
+}
+function suggestCmd(w) {
+  w = String(w || '').toLowerCase();
+  let best = null, bd = 99;
+  for (const k of knownCmds()) { const x = dist(w, k); if (x < bd) { bd = x; best = k; } }
+  return best && bd <= Math.max(1, Math.floor(w.length / 3)) ? best : null;
+}
+function hintFor(w) { const g = suggestCmd(w); return g ? '  → может, ты имел в виду ' + g + ' ?' : ''; }
+
+function scanBugs(probable) {
+  const out = [], known = knownCmds();
+  const L = [];
+  editor.value.split('\n').forEach((raw, i) => { const t = raw.trim(); if (t && t[0] !== '#') L.push({ t, n: i + 1 }); });
+  const stack = [], arts = {}, mems = {}, vars = new Set(['mousex', 'mousey', 'player', 'online', 'net1', 'net2', 'net3', 'net4', 'net5', 'net6', 'net7', 'net8']), ids = new Set(), timers = new Set();
+  const usedArt = new Set(), usedMem = new Set(), idSeen = {};
+  const bad = (n, m) => out.push({ line: n, msg: m });
+  const warn = (n, m) => { if (probable) out.push({ line: n, msg: m, warn: true }); };
+  // 1) что объявлено
+  for (const { t, n } of L) {
+    const w = t.split(/\s+/)[0].toLowerCase(), a = t.replace(/"[^"]*"/g, '"x"').split(/\s+/).slice(1);
+    if (w === '/art') arts[a[0]] = n;
+    if (w === '/memory') mems[a[0]] = n;
+    if (w === '/timer' && a[0] && a[0] !== 'delete') timers.add(a[0]);
+    if (w === '/id' && a[0]) { if (idSeen[a[0]]) warn(n, 'имя «' + a[0] + '» уже было в строке ' + idSeen[a[0]] + ' (если не было /delete, это путаница)'); else idSeen[a[0]] = n; ids.add(a[0]); }
+    if (w === '/clone' && a[1]) ids.add(a[1]);
+    if (VAR_MAKERS.has(w)) a.forEach(x => vars.add(x.toLowerCase()));
+  }
+  // 2) проверка строк
+  for (const { t, n } of L) {
+    const parts = t.split(/\s+/), w = parts[0].toLowerCase();
+    const noq = t.replace(/"[^"]*"/g, '"x"');
+    const a = noq.split(/\s+/).slice(1);
+    if ((t.match(/"/g) || []).length % 2) bad(n, 'не закрыта кавычка "');
+    if (w[0] !== '/') { bad(n, 'строка должна начинаться с /  (' + parts[0] + ')'); continue; }
+    if (!known.has(w) && !/^\/sp\d*[.,]?\d*$/.test(w)) { bad(n, 'неизвестная команда ' + parts[0] + hintFor(w)); continue; }
+    for (const x of a) if (/^#\S/.test(x) && !/^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(x)) bad(n, 'неправильный цвет ' + x);
+    // блоки
+    if (w === '/group') stack.push({ w, n });
+    else if (w === '//s') { const top = stack.pop(); if (!top || top.w !== '/group') bad(n, 'лишний //s (нет /group)'); }
+    else if (w === '//else') { const top = stack[stack.length - 1]; if (!top || top.w !== '//but') bad(n, '//else без //but'); }
+    else if (w === '/end') { if (!stack.pop()) bad(n, 'лишний /end'); }
+    else if (BLOCK_OPEN.has(w) && !(w === '/timer' && a[0] === 'delete')) stack.push({ w, n });
+    // ссылки
+    if (w === '/use' && a[0]) { usedArt.add(a[0]); if (!(a[0] in arts)) bad(n, '/use «' + a[0] + '»: такого /art нет'); }
+    if (w === '/do' && a[0]) { usedMem.add(a[0]); if (!(a[0] in mems)) bad(n, '/do «' + a[0] + '»: такого /memory нет'); }
+    // вероятные
+    if (w === '//but' && /[^=!<>]=[^=]/.test(noq.slice(5))) warn(n, 'в условии одно «=». Может, нужно «==» ?');
+    if (w === '/repeat' && +a[0] > 20000) warn(n, 'очень много повторов (' + a[0] + '), может тормозить');
+    if (w === '/no' && a[0] && !timers.has(a[0])) warn(n, '/no «' + a[0] + '»: такого таймера нет');
+    if (OBJ_ARG.has(w) && a[0] && !/[$\d.\-]/.test(a[0][0]) && !ids.has(a[0]) && !(a[0] in arts)) warn(n, 'имя «' + a[0] + '» нигде не создано через /id');
+    for (const m of noq.matchAll(/\$([A-Za-zА-Яа-яЁё_][\wА-Яа-яЁё]*)/g)) {
+      const v = m[1].toLowerCase();
+      if (!vars.has(v) && !ids.has(m[1])) warn(n, 'переменная $' + m[1] + ' нигде не создана (/var или /random)');
+    }
+    for (const m of t.matchAll(/"[^"]*"/g)) for (const q of m[0].matchAll(/\$([A-Za-zА-Яа-яЁё_][\wА-Яа-яЁё]*)/g))
+      if (!vars.has(q[1].toLowerCase())) warn(n, 'в тексте $' + q[1] + ' — такой переменной нет');
+  }
+  for (const b of stack) bad(b.n, 'нет закрытия для ' + b.w + (b.w === '/group' ? ' (нужен //s)' : ' (нужен /end)'));
+  for (const k in arts) if (!usedArt.has(k)) warn(arts[k], '/art «' + k + '» нигде не используется');
+  for (const k in mems) if (!usedMem.has(k)) warn(mems[k], '/memory «' + k + '» нигде не вызывается через /do');
+  return out;
+}
+function doScan(probable) {
+  if (stage.classList.contains('show')) exitStage();
+  const res = scanBugs(probable);
+  const exact = res.filter(r => !r.warn).length, maybe = res.length - exact;
+  showErrors(res);
+  statusEl.textContent = res.length
+    ? '🔍 Точных: ' + exact + (probable ? ' · Вероятных: ' + maybe : '')
+    : '✅ ' + (probable ? 'Багов не нашёл (даже вероятных)' : 'Точных багов нет');
+}
+document.getElementById('scanBtn').onclick = () => doScan(false);
+document.getElementById('scanBtn2').onclick = () => doScan(true);
+
+// ===== v17: БАЙТКОД =====
+document.getElementById('bcBtn').onclick = () => {
+  if (stage.classList.contains('show')) exitStage();
+  let rep;
+  try { rep = bytecodeReport(); } catch (e) { fatal(e); return; }
+  document.getElementById('bcInfo').textContent = rep.info;
+  document.getElementById('bcOut').textContent = rep.text;
+  document.getElementById('bcModal').classList.add('show');
+  showErrors(currentErrors);
+  statusEl.textContent = '🔬 Байткод готов';
+};
+document.getElementById('bcClose').onclick = () => document.getElementById('bcModal').classList.remove('show');
+document.getElementById('bcModal').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('show'); });
+document.getElementById('bcCopy').onclick = () => {
+  const b = document.getElementById('bcCopy');
+  lmCopyText(document.getElementById('bcOut').textContent).then(ok => { b.textContent = ok ? '✅ Скопировано' : '⚠ Выдели и скопируй вручную'; });
+};
+
+// ===== v11: РАЗМЕР ШРИФТА =====
+const FONT_SIZES = [12, 14, 16, 18, 22];
+let fontIdx = 1;
+try { const f = parseInt(localStorage.getItem('rabbit_font'), 10); if (f >= 0 && f < FONT_SIZES.length) fontIdx = f; } catch (e) {}
+function applyFont() {
+  editor.style.fontSize = lineNums.style.fontSize = FONT_SIZES[fontIdx] + 'px';
+  updateLineNums();
+}
+document.getElementById('fontBtn').onclick = () => {
+  fontIdx = (fontIdx + 1) % FONT_SIZES.length;
+  try { localStorage.setItem('rabbit_font', fontIdx); } catch (e) {}
+  applyFont();
+  statusEl.textContent = '🔠 Шрифт ' + FONT_SIZES[fontIdx];
+};
+document.getElementById('carrotBtn').onclick = () => {
+  if (confirm('Загрузить игру «Лови морковки»? Текущий код перезапишется.')) {
+    editor.value = "# 🥕 Лови морковки (Rabbit 11)\n/size 400 600\n/bgcolor #0b1233\n/var score 0\n/var spd 6\n/color #0b1233\n/rect 0 0 400 600\n/id sky\n/gradient sky #070b24 #ff8a65\n/color #ffffff\n/repeat 30\n/random sx 5 395\n/random sy 5 330\n/circle $sx $sy 1.5\n/end\n/color #fff6c8\n/circle 320 90 30\n/id moon\n/shadow moon #fff6c8 30\n/color #e8dca0\n/circle 310 80 6\n/circle 330 100 8\n/color #12301d\n/circle 60 640 130\n/circle 260 660 150\n/circle 420 630 110\n/color #2e7d32\n/rect 0 556 400 44\n/id ground\n/gradient ground #3fa34d #0d3b12\n/group\n/color #ffffff\n/rect 182 512 12 36\n/round 6\n/rect 208 512 12 36\n/round 6\n/color #ffb6c9\n/rect 185 518 6 24\n/rect 211 518 6 24\n/color #ffffff\n/circle 200 560 24\n/color #ffb6c9\n/circle 190 568 5\n/circle 210 568 5\n/color #000000\n/circle 191 556 3\n/circle 209 556 3\n/color #ff6f91\n/circle 200 563 3\n//s\n/id hero\n/shadow hero #ffffff 18\n/border hero\n/group\n/color #ff8c1a\n/rect 0 0 14 34\n/round 5\n/color #2e9e2e\n/rect 1 -9 4 10\n/rect 5 -12 4 13\n/rect 9 -9 4 10\n//s\n/id car\n/shadow car #ff8c1a 22\n/trail car\n/moveTo car 100 -40\n/color #ffffff\n/text \"0\" 0 20 44\n/id sc\n/shadow sc #00d4ff 14\n/moveTo sc 200-sc.w/2 20\n/vignette 0.55\n/weather snow\n/music happy\n//key a left\n/move hero -32 0\n/end\n//key d right\n/move hero 32 0\n/end\n//tap 0 0 200 600\n/move hero -32 0\n/end\n//tap 200 0 400 600\n/move hero 32 0\n/end\n/timer fall 0.03 inf\n/move car 0 $spd\n//but car touches hero\n/add score 1\n/sound pop\n/particle car.x car.y 45 #ffd23f\n/shake 5 0.25\n//but $spd < 14\n/add spd 0.25\n/end\n/delete sc\n/color #ffffff\n/text \"$score\" 0 20 44\n/id sc\n/shadow sc #00d4ff 14\n/moveTo sc 200-sc.w/2 20\n/random cx 20 360\n/moveTo car $cx -40\n/end\n//but car.y > 600\n/sound lose\n/flash #ff0000\n/random cx 20 360\n/moveTo car $cx -40\n/end\n/end\n";
+    updateLineNums();
+    hideErrors();
+  }
+};
+
+document.getElementById('exitBtn').onclick = exitStage;
+
+// ===== АВТОСОХРАНЕНИЕ =====
+let autoSaveTimer = null;
+function quickSave() {
+  try { localStorage.setItem('rabbit_code', editor.value); } catch (e) {}
+}
+editor.addEventListener('input', () => {
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(quickSave, 2000);
+});
+window.addEventListener('pagehide', quickSave);
+document.addEventListener('visibilitychange', () => { if (document.hidden) quickSave(); });
+
+// ===== КЛАВИШИ =====
+editor.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    e.preventDefault();
+    document.getElementById('runBtn').click();
+  }
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    // insertText сохраняет историю отмены (Ctrl+Z) и вызывает автосохранение
+    if (!document.execCommand || !document.execCommand('insertText', false, '  ')) {
+      editor.setRangeText('  ', editor.selectionStart, editor.selectionEnd, 'end');
+      editor.dispatchEvent(new Event('input'));
+    }
+  }
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && stage.classList.contains('show')) exitStage();
+});
+
+// имена клавиш: буквы берём по физической клавише (работает и в русской раскладке)
+const KEY_MAP = Object.assign(Object.create(null), {
+  arrowup: 'up', arrowdown: 'down', arrowleft: 'left', arrowright: 'right',
+  ' ': 'space', 'пробел': 'space', 'вверх': 'up', 'вниз': 'down', 'влево': 'left', 'вправо': 'right'
+});
+function normKey(k) {
+  k = String(k).toLowerCase();
+  return KEY_MAP[k] || k;
+}
+function keyNames(e) {
+  const out = [], c = e.code || '';
+  if (/^Key[A-Z]$/.test(c)) out.push(c.slice(3).toLowerCase());
+  else if (/^Digit\d$/.test(c)) out.push(c.slice(5));
+  else if (/^Arrow/.test(c)) out.push(c.slice(5).toLowerCase());
+  else if (c === 'Space') out.push('space');
+  else if (c === 'Enter') out.push('enter');
+  const k = normKey(e.key || '');
+  if (k && out.indexOf(k) < 0) out.push(k);
+  return out;
+}
+document.addEventListener('keydown', e => {
+  if (!stage.classList.contains('show') || !runCtl || stopped) return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  initAudio();
+  try {
+    if (runCtl.onKey(keyNames(e), e.repeat)) e.preventDefault();
+  } catch (err) { fatal(err); }
+});
+
+
+// ===== v12: СВЯЗЬ МЕЖДУ УСТРОЙСТВАМИ (WebRTC по Wi-Fi, без сервера) =====
+const link = { pc: null, ch: null, gch: null, host: false, live: false, applying: false, buf: {}, timer: null };
+const $lm = id => document.getElementById(id);
+function lmState(txt, ok) { const e = $lm('lmState'); e.textContent = txt; e.className = ok ? 'ok' : ''; }
+function lmOpen() { return !!(link.ch && link.ch.readyState === 'open'); }
+function lmShowConn() {
+  const on = lmOpen();
+  $lm('lmSetup').style.display = on ? 'none' : '';
+  $lm('lmConn').style.display = on ? '' : 'none';
+  $lm('linkBtn').style.color = on ? '#5dff9a' : '';
+}
+function lmClose() {
+  link.live = false; $lm('lmLive').textContent = '🔁 Живой режим: выкл';
+  try { if (link.ch) link.ch.close(); } catch (e) {}
+  try { if (link.pc) link.pc.close(); } catch (e) {}
+  link.pc = link.ch = link.gch = null; link.host = false; link.buf = {};
+}
+async function packCode(obj) {
+  const bytes = new TextEncoder().encode(JSON.stringify(obj));
+  let out = bytes, pre = 'P';
+  if (window.CompressionStream) {
+    try {
+      const cs = new CompressionStream('deflate-raw'), w = cs.writable.getWriter();
+      w.write(bytes); w.close();
+      out = new Uint8Array(await new Response(cs.readable).arrayBuffer()); pre = 'Z';
+    } catch (e) { out = bytes; pre = 'P'; }
+  }
+  let bin = ''; for (let i = 0; i < out.length; i++) bin += String.fromCharCode(out[i]);
+  return pre + btoa(bin);
+}
+async function unpackCode(str) {
+  str = String(str).trim().replace(/\s+/g, '');
+  const pre = str[0];
+  if (pre !== 'Z' && pre !== 'P') throw new Error('это не похоже на код связи');
+  const bin = atob(str.slice(1));
+  let bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  if (pre === 'Z') {
+    if (!window.DecompressionStream) throw new Error('браузер не умеет распаковывать — обнови его');
+    const ds = new DecompressionStream('deflate-raw'), w = ds.writable.getWriter();
+    w.write(bytes); w.close();
+    bytes = new Uint8Array(await new Response(ds.readable).arrayBuffer());
+  }
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+function waitIce(pc) {
+  return new Promise(res => {
+    if (pc.iceGatheringState === 'complete') return res();
+    const done = () => { pc.removeEventListener('icegatheringstatechange', ch); res(); };
+    const ch = () => { if (pc.iceGatheringState === 'complete') done(); };
+    pc.addEventListener('icegatheringstatechange', ch);
+    setTimeout(done, 4000);
+  });
+}
+function newPc() {
+  lmClose();
+  if (!window.RTCPeerConnection) throw new Error('этот браузер не поддерживает WebRTC');
+  const pc = new RTCPeerConnection({ iceServers: [] });   // только локальная сеть
+  link.pc = pc;
+  pc.onconnectionstatechange = () => {
+    if (pc !== link.pc) return;
+    const st = pc.connectionState;
+    if (st === 'failed') lmState('❌ Не вышло соединиться (гостевая Wi-Fi? разные сети?)');
+    if (st === 'disconnected' || st === 'closed') { lmState('Отключено'); lmShowConn(); }
+  };
+  return pc;
+}
+function wireChannel(ch) {
+  if (ch.label === 'game') {
+    link.gch = ch;
+    ch.onmessage = e => { try { onLinkRaw(String(e.data)); } catch (err) {} };
+    return;
+  }
+  link.ch = ch;
+  ch.onopen = () => { sprAnnounce(); lmState('✅ Подключено! Можно отправлять', true); statusEl.textContent = '📡 Подключено'; lmShowConn(); };
+  ch.onclose = () => { lmState('Отключено'); statusEl.textContent = '📡 Отключено'; lmShowConn(); };
+  ch.onmessage = e => { try { onLinkRaw(String(e.data)); } catch (err) { statusEl.textContent = '📡 ' + err.message; } };
+}
+function sendLink(obj) {
+  if (!lmOpen()) throw new Error('нет соединения');
+  const str = JSON.stringify(obj), N = 15000;
+  if (str.length <= N) { link.ch.send(str); return; }
+  const id = Math.random().toString(36).slice(2, 8), n = Math.ceil(str.length / N);
+  for (let i = 0; i < n; i++) link.ch.send('\u0001' + id + '|' + i + '|' + n + '|' + str.slice(i * N, (i + 1) * N));
+}
+function onLinkRaw(raw) {
+  if (raw[0] === '\u0001') {
+    const m = raw.match(/^\u0001([^|]+)\|(\d+)\|(\d+)\|([\s\S]*)$/);
+    if (!m) return;
+    const b = link.buf[m[1]] || (link.buf[m[1]] = { n: +m[3], p: [], c: 0 });
+    if (b.p[+m[2]] === undefined) { b.p[+m[2]] = m[4]; b.c++; }
+    if (b.c === b.n) { delete link.buf[m[1]]; onLinkMsg(JSON.parse(b.p.join(''))); }
+    return;
+  }
+  onLinkMsg(JSON.parse(raw));
+}
+function onLinkMsg(m) {
+  if (m.t === 'code' && typeof m.v === 'string') {
+    if (!link.live && !confirm('Пришёл код с другого устройства (' + m.v.split('\n').length + ' строк). Заменить твой?')) return;
+    link.applying = true;
+    editor.value = m.v; updateLineNums(); quickSave(); hideErrors();
+    link.applying = false;
+    link.codeAt = Date.now();
+    statusEl.textContent = '📡 Код получен';
+  } else if (m.t === 'n' || m.t === 'e') {
+    netRecv(m);
+  } else if (m.t === 'sh') {
+    sprOffer(m.h);
+  } else if (m.t === 'sp') {
+    sprGot(m);
+  } else if (m.t === 'run') {
+    if (Date.now() - (link.codeAt || 0) < 5000) document.getElementById('runBtn').click();   // только сразу после принятого кода
+  } else if (m.t === 'live') {
+    if (m.v && !link.live && !confirm('Другое устройство включает живой режим: твой код будет заменяться его кодом. Разрешить?')) {
+      try { sendLink({ t: 'live', v: false }); } catch (e) {}
+      return;
+    }
+    link.live = !!m.v; $lm('lmLive').textContent = '🔁 Живой режим: ' + (link.live ? 'вкл' : 'выкл');
+  }
+}
+
+// ===== v13: МУЛЬТИПЛЕЕР (поверх 📡 связи) =====
+// $player — 1 (создал связь) или 2 (подключился); без связи всегда 1. $online — 1/0.
+// /netown имя ...   — эти объекты двигаю я, другой игрок видит их у себя
+// /netvar имя ...   — общие переменные (кто изменил последним, того и значение)
+// /netsend имя [..] — послать событие;  //net имя ... /end — поймать его ($net1, $net2 ...)
+const net = { me: 1, own: new Set(), vars: new Set(), last: Object.create(null), lastV: Object.create(null), h: null, active: false, n: 0 };
+const NET_SKIP = new Set(['id', 'deleted', 'name', 'children', 'phys', 'follow', 'vx', 'vy', 'ng', '__proto__', 'constructor', 'prototype']);
+const NET_TYPES = new Set(['circle', 'rect', 'text', 'line']);
+function netStop() { if (net.h) { clearInterval(net.h); net.h = null; } }
+function netReset() {
+  netStop();
+  net.own = new Set(); net.vars = new Set(); net.last = Object.create(null); net.lastV = Object.create(null);
+  net.active = false; net.n = 0;
+  const on = lmOpen();
+  net.me = on && !link.host ? 2 : 1;
+  vars.player = net.me; vars.online = on ? 1 : 0;
+}
+function netStart() { net.active = true; if (!net.h) net.h = setInterval(() => { try { netTick(); } catch (e) { fatal(e); } }, 33); }
+function netSend(obj, reliable) {
+  if (!lmOpen()) return;
+  try {
+    const s = JSON.stringify(obj), g = link.gch;
+    if (!reliable && g && g.readyState === 'open') g.send(s); else link.ch.send(s);
+  } catch (e) {}
+}
+function netFind(n) {
+  for (let i = objects.length - 1; i >= 0; i--) { const o = objects[i]; if (o.name === n && !o.deleted) return o; }
+  return null;
+}
+function netSnap(o) {
+  if (o.type === 'group') { const b = bbox(o); return { type: 'group', x: b.x1, y: b.y1 }; }
+  const s = {};
+  for (const k in o) { if (NET_SKIP.has(k) || k[0] === '_') continue; s[k] = o[k]; }
+  return s;
+}
+function netTick() {
+  if (stopped || !lmOpen()) return;
+  if (++net.n % 30 === 0) net.last = Object.create(null);     // раз в секунду шлём всё заново (на случай потерь)
+  const out = [];
+  for (const n of net.own) {
+    const o = netFind(n);
+    if (!o) { if (net.last[n] !== 'x') { net.last[n] = 'x'; out.push({ n, del: 1 }); } continue; }
+    const s = netSnap(o), j = JSON.stringify(s);
+    if (net.last[n] !== j) { net.last[n] = j; out.push({ n, s }); }
+  }
+  if (out.length) netSend({ t: 'n', o: out });
+  let vv = null;
+  for (const n of net.vars) {
+    const v = vars[n];
+    if (net.lastV[n] !== v) { net.lastV[n] = v; (vv = vv || {})[n] = v; }
+  }
+  if (vv) netSend({ t: 'n', v: vv }, true);
+}
+function netRecv(m) {
+  if (stopped || !runCtl) return;
+  if (m.t === 'e') {
+    if (typeof m.n === 'string' && m.n.length < 64) runCtl.onNet(m.n, Array.isArray(m.a) ? m.a.slice(0, 8) : []);
+    return;
+  }
+  let ch = false;
+  if (Array.isArray(m.o)) for (const it of m.o) {
+    if (!it || typeof it.n !== 'string') continue;
+    let o = netFind(it.n);
+    if (it.del) { if (o) { markDead(o); ch = true; } continue; }
+    const s = it.s;
+    if (!s || typeof s !== 'object') continue;
+    if (!o) {
+      if (!NET_TYPES.has(s.type) || objects.length >= MAX_OBJECTS) continue;
+      o = { id: nextId++, name: it.n };
+      for (const k in s) if (!NET_SKIP.has(k)) o[k] = s[k];
+      addObj(o); everNames.add(it.n); ch = true;
+    } else if (o.type === 'group') {
+      const b = bbox(o);
+      if (isFinite(s.x) && isFinite(s.y) && (Math.abs(s.x - b.x1) > 0.01 || Math.abs(s.y - b.y1) > 0.01)) { shift(o, s.x - b.x1, s.y - b.y1); ch = true; }
+    } else {
+      for (const k in s) if (!NET_SKIP.has(k)) o[k] = s[k];
+      ch = true;
+    }
+  }
+  if (m.v && typeof m.v === 'object') for (const k of Object.keys(m.v)) {
+    if (net.vars.has(k)) { vars[k] = m.v[k]; net.lastV[k] = m.v[k]; ch = true; }
+  }
+  if (ch) render();
+}
+function lmCopyText(txt) {
+  if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(txt).then(() => true, () => false);
+  const t = document.createElement('textarea'); t.value = txt; t.style.cssText = 'position:fixed;opacity:0';
+  document.body.appendChild(t); t.select(); let ok = false;
+  try { ok = document.execCommand('copy'); } catch (e) {}
+  t.remove(); return Promise.resolve(ok);
+}
+function lmStepBox(label, code, readonly, btnId, btnText) {
+  return '<small>' + label + '</small><textarea id="' + (readonly ? 'lmOut' : 'lmIn') + '"' + (readonly ? ' readonly' : '') + '>' + (code || '') + '</textarea>' +
+    (readonly ? '<button class="btn ghost" id="lmOutCopy">📋 Копировать</button>' : '') +
+    (btnId ? '<button class="btn" id="' + btnId + '">' + btnText + '</button>' : '');
+}
+function lmWireCopy() {
+  const b = $lm('lmOutCopy');
+  if (b) b.onclick = () => lmCopyText($lm('lmOut').value).then(ok => { b.textContent = ok ? '✅ Скопировано' : '⚠ Выдели и скопируй вручную'; });
+}
+$lm('linkBtn').onclick = () => { lmShowConn(); $lm('linkModal').classList.add('show'); };
+$lm('lmClose').onclick = () => $lm('linkModal').classList.remove('show');
+$lm('linkModal').addEventListener('click', e => { if (e.target === $lm('linkModal')) $lm('linkModal').classList.remove('show'); });
+
+$lm('lmHost').onclick = async () => {
+  try {
+    lmState('Создаю код…');
+    const pc = newPc();
+    wireChannel(pc.createDataChannel('rabbit'));
+    link.host = true;
+    wireChannel(pc.createDataChannel('game', { ordered: false, maxRetransmits: 0 }));
+    await pc.setLocalDescription(await pc.createOffer());
+    await waitIce(pc);
+    const code = await packCode(pc.localDescription.toJSON());
+    $lm('lmStep').innerHTML = lmStepBox('Код 1 — отправь его на второе устройство (Telegram, заметки…):', code, true) +
+      lmStepBox('Потом вставь сюда Код 2 с того устройства:', '', false, 'lmGo', 'Подключить');
+    lmWireCopy();
+    lmState('Жду Код 2…');
+    $lm('lmGo').onclick = async () => {
+      try {
+        lmState('Подключаюсь…');
+        await pc.setRemoteDescription(await unpackCode($lm('lmIn').value));
+      } catch (e) { lmState('❌ ' + e.message); }
+    };
+  } catch (e) { lmState('❌ ' + e.message); }
+};
+$lm('lmJoin').onclick = () => {
+  $lm('lmStep').innerHTML = lmStepBox('Вставь сюда Код 1 с первого устройства:', '', false, 'lmMk', 'Создать ответ');
+  lmState('Жду Код 1…');
+  $lm('lmMk').onclick = async () => {
+    try {
+      const offer = await unpackCode($lm('lmIn').value);
+      lmState('Создаю ответ…');
+      const pc = newPc();
+      pc.ondatachannel = e => wireChannel(e.channel);
+      await pc.setRemoteDescription(offer);
+      await pc.setLocalDescription(await pc.createAnswer());
+      await waitIce(pc);
+      const code = await packCode(pc.localDescription.toJSON());
+      $lm('lmStep').innerHTML = lmStepBox('Код 2 — отправь его обратно на первое устройство:', code, true);
+      lmWireCopy();
+      lmState('Жду, пока первое устройство нажмёт «Подключить»…');
+    } catch (e) { lmState('❌ ' + e.message); }
+  };
+};
+$lm('lmSend').onclick = () => { try { sendLink({ t: 'code', v: editor.value }); statusEl.textContent = '📡 Код отправлен'; } catch (e) { lmState('❌ ' + e.message); } };
+$lm('lmRun').onclick = () => { try { sendLink({ t: 'code', v: editor.value }); sendLink({ t: 'run' }); } catch (e) { lmState('❌ ' + e.message); } };
+$lm('lmLive').onclick = () => {
+  link.live = !link.live;
+  $lm('lmLive').textContent = '🔁 Живой режим: ' + (link.live ? 'вкл' : 'выкл');
+  try { sendLink({ t: 'live', v: link.live }); if (link.live) sendLink({ t: 'code', v: editor.value }); } catch (e) { lmState('❌ ' + e.message); }
+};
+$lm('lmOff').onclick = () => { lmClose(); lmState('Отключено'); lmShowConn(); $lm('lmStep').innerHTML = ''; };
+editor.addEventListener('input', () => {
+  if (!link.live || link.applying || !lmOpen()) return;
+  clearTimeout(link.timer);
+  link.timer = setTimeout(() => { try { sendLink({ t: 'code', v: editor.value }); } catch (e) {} }, 300);
+});
+$lm('lmShare').onclick = () => {
+  if (navigator.share) navigator.share({ title: 'Rabbit — мой код', text: editor.value }).catch(() => {});
+  else lmCopyText(editor.value).then(ok => lmState(ok ? '📋 Код скопирован — вставь где нужно' : '⚠ Не удалось скопировать'));
+};
+$lm('lmCopy').onclick = () => lmCopyText(editor.value).then(ok => lmState(ok ? '📋 Код скопирован' : '⚠ Не удалось скопировать'));
+$lm('lmPaste').onclick = async () => {
+  try {
+    const t = await navigator.clipboard.readText();
+    if (t && confirm('Заменить твой код текстом из буфера (' + t.split('\n').length + ' строк)?')) {
+      editor.value = t; updateLineNums(); quickSave(); hideErrors();
+    }
+  } catch (e) { lmState('⚠ Браузер не дал прочитать буфер — вставь текст в редактор вручную'); }
+};
+
+// ===== v14: СПРАЙТЫ (хранятся в IndexedDB браузера, а не в файле и не в коде) =====
+const SPR = Object.create(null);
+let sprDB = null;
+function sprOpenDB() {
+  return new Promise(res => {
+    try {
+      const r = indexedDB.open('rabbit_sprites', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('s', { keyPath: 'name' });
+      r.onsuccess = () => res(r.result);
+      r.onerror = r.onblocked = () => res(null);
+    } catch (e) { res(null); }
+  });
+}
+function sprTx(mode, fn) {
+  return new Promise(res => {
+    if (!sprDB) return res(null);
+    try {
+      const tx = sprDB.transaction('s', mode), st = tx.objectStore('s'), rq = fn(st);
+      tx.oncomplete = () => res(rq && rq.result !== undefined ? rq.result : true);
+      tx.onerror = tx.onabort = () => res(null);
+    } catch (e) { res(null); }
+  });
+}
+function sprMake(rec, tmp) {
+  const fr = rec.frames || 1, img = new Image();
+  const s = { name: rec.name, data: rec.data, frames: fr, pixel: !!rec.pixel, w: rec.w, h: rec.h,
+    fw: Math.max(1, Math.floor(rec.w / fr)), img, ok: false, tmp: !!tmp };
+  img.onload = () => { s.ok = true; if (runCtl) render(); };
+  img.src = rec.data;
+  SPR[rec.name] = s;
+  return s;
+}
+function drawSprite(o) {
+  const s = SPR[o.img];
+  if (!s || !s.ok) return false;
+  setFx(o);
+  const sm = !s.pixel;
+  if (ctx.imageSmoothingEnabled !== sm) ctx.imageSmoothingEnabled = sm;
+  let sx = 0;
+  if (s.frames > 1) {
+    const f = o.fps ? Math.floor(performance.now() / 1000 * o.fps) : Math.floor(o.frame || 0);
+    sx = (((f % s.frames) + s.frames) % s.frames) * s.fw;
+  }
+  if (!o.rot && !o.flip) ctx.drawImage(s.img, sx, 0, s.fw, s.h, o.x, o.y, o.w, o.h);
+  else {
+    ctx.save();
+    ctx.translate(o.x + o.w / 2, o.y + o.h / 2);
+    if (o.rot) ctx.rotate(o.rot);
+    if (o.flip) ctx.scale(-1, 1);
+    ctx.drawImage(s.img, sx, 0, s.fw, s.h, -o.w / 2, -o.h / 2, o.w, o.h);
+    ctx.restore();
+  }
+  if (!sm) ctx.imageSmoothingEnabled = true;
+  clearFx();
+  return true;
+}
+function sprSay(t) { $lm('sprMsg').textContent = t || ''; }
+function sprList() {
+  const box = $lm('sprList'); box.textContent = '';
+  const names = Object.keys(SPR).sort();
+  let total = 0;
+  for (const n of names) {
+    const s = SPR[n]; total += s.data.length;
+    const row = document.createElement('div'); row.className = 'sp';
+    const im = document.createElement('img'); im.src = s.data; row.appendChild(im);
+    const sp = document.createElement('span');
+    sp.textContent = n + (s.tmp ? '  (от друга)' : '');
+    const sm = document.createElement('small');
+    sm.textContent = s.fw + '×' + s.h + (s.frames > 1 ? ' · кадров: ' + s.frames : '') + ' · ' + Math.max(1, Math.round(s.data.length / 1024)) + ' КБ';
+    sp.appendChild(sm); row.appendChild(sp);
+    const b = document.createElement('button'); b.className = 'btn ghost'; b.textContent = '🗑';
+    b.onclick = () => { delete SPR[n]; if (!s.tmp) sprTx('readwrite', st => st.delete(n)); sprList(); sprAnnounce(); if (runCtl) render(); };
+    row.appendChild(b); box.appendChild(row);
+  }
+  $lm('sprInfo').textContent = names.length
+    ? 'Всего: ' + names.length + ' · ' + Math.max(1, Math.round(total / 1024)) + ' КБ' + (sprDB ? '' : ' · ⚠ браузер не даёт сохранять — пропадут после закрытия')
+    : 'Пока пусто' + (sprDB ? '' : ' · ⚠ браузер не даёт сохранять — картинки пропадут после закрытия');
+}
+function sprLoadFile(f) {
+  return new Promise((res, rej) => {
+    const u = URL.createObjectURL(f), im = new Image();
+    im.onload = () => { URL.revokeObjectURL(u); res(im); };
+    im.onerror = () => { URL.revokeObjectURL(u); rej(new Error('это не картинка')); };
+    im.src = u;
+  });
+}
+async function sprAddFiles(files) {
+  const frames = Math.max(1, Math.min(64, parseInt($lm('sprFrames').value) || 1)), pixel = $lm('sprPixel').checked;
+  const custom = $lm('sprName').value.trim();
+  let ok = 0;
+  for (const f of files) {
+    try {
+      const im = await sprLoadFile(f);
+      const iw = im.naturalWidth || 256, ih = im.naturalHeight || 256;
+      const sc = Math.min(1, (frames > 1 ? 1024 : 256) / iw, 256 / ih);
+      const fw = Math.max(1, Math.round(iw * sc / frames)), h = Math.max(1, Math.round(ih * sc)), w = fw * frames;
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      const x = c.getContext('2d'); x.imageSmoothingEnabled = !pixel; x.drawImage(im, 0, 0, w, h);
+      let data = pixel ? c.toDataURL('image/png') : c.toDataURL('image/webp', 0.85);
+      if (!pixel && data.indexOf('data:image/webp') !== 0) data = c.toDataURL('image/png');
+      let name = (files.length === 1 && custom ? custom : f.name.replace(/\.[^.]*$/, '')).replace(/[\s.$]+/g, '_').slice(0, 40) || 'sprite';
+      const rec = { name, data, frames, pixel, w, h };
+      sprMake(rec);
+      await sprTx('readwrite', st => st.put(rec));
+      ok++;
+    } catch (e) { sprSay('❌ ' + f.name + ': ' + e.message); }
+  }
+  if (ok) sprSay('✅ Добавлено: ' + ok);
+  sprList(); sprAnnounce();
+}
+function sprAnnounce() {
+  if (!lmOpen()) return;
+  try { sendLink({ t: 'sh', h: Object.keys(SPR) }); } catch (e) {}
+}
+function sprOffer(h) {
+  if (!Array.isArray(h) || !lmOpen()) return;
+  const have = new Set(h);
+  for (const n in SPR) {
+    const s = SPR[n];
+    if (s.tmp || have.has(n)) continue;
+    try { sendLink({ t: 'sp', n, d: s.data, f: s.frames, p: s.pixel ? 1 : 0, w: s.w, h: s.h }); } catch (e) {}
+  }
+}
+function sprGot(m) {
+  if (!m || typeof m.n !== 'string' || !/^[^\s.$]{1,40}$/.test(m.n) || SPR[m.n]) return;
+  if (typeof m.d !== 'string' || m.d.indexOf('data:image/') !== 0 || m.d.length > 600000) return;
+  const w = +m.w, h = +m.h, f = +m.f;
+  if (!(w >= 1 && w <= 2048 && h >= 1 && h <= 2048 && f >= 1 && f <= 64)) return;
+  if (Object.keys(SPR).length >= 200) return;
+  sprMake({ name: m.n, data: m.d, frames: Math.floor(f), pixel: !!m.p, w, h }, true);
+  sprList();
+}
+async function sprInit() {
+  sprDB = await sprOpenDB();
+  const all = await sprTx('readonly', st => st.getAll());
+  if (Array.isArray(all)) for (const r of all) if (r && typeof r.name === 'string' && typeof r.data === 'string') sprMake(r);
+  sprList();
+}
+$lm('sprBtn').onclick = () => { sprList(); $lm('sprModal').classList.add('show'); };
+$lm('sprClose').onclick = () => $lm('sprModal').classList.remove('show');
+$lm('sprModal').addEventListener('click', e => { if (e.target === $lm('sprModal')) $lm('sprModal').classList.remove('show'); });
+$lm('sprAdd').onclick = () => {
+  const f = Array.from($lm('sprFile').files || []);
+  if (!f.length) { sprSay('Выбери картинку (или несколько)'); return; }
+  sprSay('Обрабатываю…');
+  sprAddFiles(f).then(() => { $lm('sprFile').value = ''; $lm('sprName').value = ''; });
+};
+
+document.getElementById('netDemoBtn').onclick = () => {
+  if (!confirm('Загрузить пример мультиплеера? Текущий код перезапишется.')) return;
+  editor.value = `# 🎮 Мультиплеер на двоих
+# 1) 📡 — подключи второе устройство  2) там же нажми «Отправить и запустить»
+# $player: 1 — создавший связь, 2 — подключившийся. Без связи играешь за 1.
+/size 800 600
+/bgcolor #1a1a2e
+/color #00d4ff
+/rect 100 280 40 40
+/id p1
+/color #ff6688
+/rect 660 280 40 40
+/id p2
+/text "Ты — игрок $player. WASD / стрелки, пробел — сигнал" 20 20 18
+/netown p$player
+
+//key a left
+/move p$player -20 0
+/end
+//key d right
+/move p$player 20 0
+/end
+//key w up
+/move p$player 0 -20
+/end
+//key s down
+/move p$player 0 20
+/end
+//key space
+/sound beep
+/netsend beep
+/end
+//net beep
+/sound pop
+/end
+`;
+  updateLineNums(); quickSave(); hideErrors();
+};
+
+document.getElementById('gdBtn').onclick = () => {
+  if (!confirm('Загрузить Geometry Dash? Текущий код перезапишется.')) return;
+  editor.value = `# 🟦 Geometry Dash на Rabbit
+# Тап по экрану / ПРОБЕЛ / W / ↑ — прыжок (можно держать).
+# Шипы и стороны блоков убивают, на блоки можно приземляться.
+# После смерти тап — заново.
+/size 800 400
+/bgcolor #14142e
+/gravity 2.4
+/bgmove 140
+/parallax
+/hud
+/lives 1
+/var gameover 0
+/var score 0
+/var best 0
+/var alive 1
+/var canr 0
+/var spd 330
+/var n 0
+/var sx 0
+/var k 0
+
+# ---- мир: пол, куб и заготовки препятствий (за экраном) ----
+/memory world
+/color #ff0066
+/rect -20 320 840 100
+/id ground
+/stroke ground 3 #ffffff
+/solid ground
+/color #00e5ff
+/rect 100 280 40 40
+/id cube
+/stroke cube 3 #ffffff
+/glow cube 14
+/hitbox cube 0.8
+/platformer cube
+/spin cube 330
+/color #ff0066
+/poly -300 -300 16 3
+/id spk
+/stroke spk 2 #ffffff
+/glow spk 10
+/hurt spk
+/hitbox spk 0.55
+/nogravity spk
+/color #7a2cff
+/rect -300 -300 40 40
+/id blk
+/stroke blk 3 #ffffff
+/solid blk
+/hurt blk
+/hitbox blk 0.9
+/nogravity blk
+/end
+
+# ---- препятствия ----
+/memory mkspk
+/add n 1
+/clone spk s\${n}
+/moveTo s\${n} $sx 312
+/vx s\${n} -$spd
+/timer delete s\${n} 5
+/end
+
+/memory mkblk
+/add n 1
+/clone blk b\${n}
+/moveTo b\${n} $sx 280
+/vx b\${n} -$spd
+/timer delete b\${n} 5
+/end
+
+/memory spawn
+/random k 1 6
+/var sx 880
+//but $k == 1
+/do mkspk
+/end
+//but $k == 2
+/do mkspk
+/var sx 910
+/do mkspk
+/end
+//but $k == 3
+/do mkspk
+/var sx 910
+/do mkspk
+/var sx 940
+/do mkspk
+/end
+//but $k == 4
+/do mkblk
+/end
+//but $k == 5
+/do mkblk
+/var sx 1010
+/do mkspk
+/end
+//but $k == 6
+/do mkspk
+/end
+/end
+
+# ---- прыжок или перезапуск ----
+/memory act
+//but $alive == 1
+/jump 680
+//else
+//but $canr == 1
+/do restart
+/end
+/end
+/end
+
+/memory restart
+/clear
+/timeslow off
+/lives 1
+/var gameover 0
+/var score 0
+/var spd 330
+/var alive 1
+/var canr 0
+/do world
+/end
+
+/do world
+/dialogue "Тап или ПРОБЕЛ — прыжок" 3
+
+//tap 0 0 800 400
+/do act
+/end
+//key space up w
+/do act
+/end
+
+/timer spawn 1.15 inf
+//but $alive == 1
+/do spawn
+/end
+/end
+
+/timer tick 0.1 inf
+//but $alive == 1
+/add score 1
+//but $spd < 520
+/add spd 0.35
+/end
+/end
+/end
+
+/timer watch 0.05 inf
+//but $gameover == 1
+//but $alive == 1
+/var alive 0
+/timeslow 0.12
+//but $score > $best
+/var best $score
+/end
+/dialogue "Счёт $score · рекорд $best — тап, чтобы заново" 4
+/timer cool 0.5
+/var canr 1
+/end
+/end
+/end
+/end
+`;
+  updateLineNums(); quickSave(); hideErrors();
+};
+
+document.getElementById('physBtn').onclick = () => {
+  if (!confirm('Загрузить пример физики? Текущий код перезапишется.')) return;
+  editor.value = `# 🎱 Физика v18: быстрая пуля не пролетает сквозь тонкую стенку
+# Тап — удар по ящикам снизу. Шар массой 5 катится в стопку ящиков.
+/size 800 500
+/bgcolor #10121f
+/gravity 1.2
+/color #3a3f66
+/rect 0 470 800 30
+/id floor
+/solid floor
+/rect 0 0 20 500
+/id wl
+/solid wl
+/rect 780 0 20 500
+/id wr
+/solid wr
+/rect 0 0 800 20
+/id roof
+/solid roof
+
+# стенка толщиной 4 пикселя
+/color #ff0066
+/rect 400 120 4 350
+/id thin
+/solid thin
+/glow thin 8
+
+# пуля: 4000 пикс/с — это 66 пикселей за кадр, больше толщины стенки
+/color #00e5ff
+/circle 60 200 9
+/id bullet
+/collide bullet
+/nogravity bullet
+/bounce bullet 1
+/vx bullet 4000
+/vy bullet 700
+/glow bullet 12
+
+# стопка ящиков
+/var i 0
+/var y 428
+/repeat 4
+/add i 1
+/color #ffcc00
+/rect 600 $y 42 42
+/id q$i
+/collide q$i
+/friction q$i 0.5
+/add y -43
+/end
+
+# тяжёлый шар
+/color #7a2cff
+/circle 480 440 30
+/id ball
+/collide ball
+/mass ball 5
+/bounce ball 0.3
+/vx ball 300
+
+/color #ffffff
+/text "Тап — подбросить ящики" 20 480 16
+//tap 0 0 800 500
+/impulse q1 0 -400
+/impulse q3 0 -500
+/end
+`;
+  updateLineNums(); quickSave(); hideErrors();
+};
+
+// ===== СТАРТ =====
+loadSaved();
+applyFont();
+sprInit();
+</script>
+</body>
+</html>
